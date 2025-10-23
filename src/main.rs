@@ -4,10 +4,10 @@ mod utils;
 use crate::plot::*;
 use crate::utils::*;
 
-use anyhow::Result;
+use anyhow::*;
 use plotters::prelude::*;
 use plotters::style::full_palette::{BLACK, BLUE, GREEN, GREY_800, ORANGE, RED, WHITE};
-use ta::{Close, High, Low, Open};
+use ta::*;
 
 fn main() -> Result<()> {
     let candles = faker_candle(34);
@@ -36,16 +36,22 @@ fn main() -> Result<()> {
         .x_label_area_size(30)
         .y_label_area_size(50)
         .build_cartesian_2d(rng.clone(), from..to)?;
+
     chart
         .configure_mesh()
         .label_style(&WHITE)
         .bold_line_style(GREY_800)
         .draw()?;
 
-    draw_lines(&mut chart, &opens, &GREEN)?;
-    draw_lines(&mut chart, &highs, &RED)?;
-    draw_lines(&mut chart, &lows, &BLUE)?;
-    draw_lines(&mut chart, &closes, &ORANGE)?;
+    draw_lines(&mut chart, opens, &GREEN)?;
+    draw_lines(&mut chart, highs, &RED)?;
+    draw_lines(&mut chart, lows, &BLUE)?;
+    draw_lines(&mut chart, closes, &ORANGE.mix(0.5))?;
 
-    Ok(())
+    // To avoid the IO failure being ignored silently, we manually call the present function
+    root.present().map_err(|_| {
+        Error::msg(
+            "Unable to write result to file, please make sure 'data' dir exists under current dir",
+        )
+    })
 }
