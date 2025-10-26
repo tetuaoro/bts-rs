@@ -6,7 +6,6 @@ use crate::engine::*;
 use crate::utils::*;
 
 use anyhow::*;
-use ta::*;
 
 fn main() -> Result<()> {
     let items = get_data_from_file("data/btc.json".into())?;

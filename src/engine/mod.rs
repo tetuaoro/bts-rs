@@ -1,97 +1,14 @@
-use std::collections::VecDeque;
+mod candle;
+mod position;
+
+pub use candle::*;
+pub use position::*;
 
 use anyhow::{Error, Result};
-use ta::{Close, High, Low, Open, Volume};
 
-#[derive(Debug, Clone)]
-pub struct Candle {
-    open: f64,
-    high: f64,
-    low: f64,
-    close: f64,
-    volume: f64,
-}
-
-impl From<(f64, f64, f64, f64, f64)> for Candle {
-    fn from((open, high, low, close, volume): (f64, f64, f64, f64, f64)) -> Self {
-        Self {
-            open,
-            high,
-            low,
-            close,
-            volume,
-        }
-    }
-}
-
-impl Open for Candle {
-    fn open(&self) -> f64 {
-        self.open
-    }
-}
-
-impl High for Candle {
-    fn high(&self) -> f64 {
-        self.high
-    }
-}
-
-impl Low for Candle {
-    fn low(&self) -> f64 {
-        self.low
-    }
-}
-
-impl Close for Candle {
-    fn close(&self) -> f64 {
-        self.close
-    }
-}
-
-impl Volume for Candle {
-    fn volume(&self) -> f64 {
-        self.volume
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PositionSide {
-    Long,
-    Short,
-}
-
-#[derive(Debug, Clone)]
-pub struct Position {
-    side: PositionSide,
-    entry_price: f64,
-    quantity: f64,
-}
-
-impl From<(PositionSide, f64, f64)> for Position {
-    fn from((side, entry_price, quantity): (PositionSide, f64, f64)) -> Self {
-        Self {
-            side,
-            entry_price,
-            quantity,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PositionEventType {
-    Open(PositionSide),
-    Close,
-}
-
-#[derive(Debug, Clone)]
-pub struct PositionEvent {
-    candle_index: usize,
-    price: f64,
-    event_type: PositionEventType,
-}
-
+#[derive(Debug)]
 pub struct Backtest {
-    data: VecDeque<Candle>,
+    data: Vec<Candle>,
     position: Option<Position>,
     balance: f64,
     index: usize,
@@ -101,7 +18,7 @@ pub struct Backtest {
 impl Backtest {
     pub fn new(data: Vec<Candle>, initial_balance: f64) -> Self {
         Self {
-            data: VecDeque::from(data),
+            data,
             position: None,
             balance: initial_balance,
             index: 0,
@@ -114,7 +31,8 @@ impl Backtest {
             return Err(Error::msg("Already opened"));
         }
 
-        let (side, price, quantity) = (position.side, position.entry_price, position.quantity);
+        let (side, price, quantity) =
+            (position.side(), position.entry_price(), position.quantity());
         let cost = price * quantity;
         if self.balance < cost {
             return Err(Error::msg("Unbalanced wallet"));
@@ -125,46 +43,45 @@ impl Backtest {
             PositionSide::Short => self.balance += cost,
         }
 
-        self.position = Some(Position {
-            side: side.clone(),
-            entry_price: price,
-            quantity,
-        });
-
-        self.position_history.push(PositionEvent {
-            candle_index: self.index.saturating_sub(1),
+        self.position = Some(Position::from((side.clone(), price, quantity)));
+        self.position_history.push(PositionEvent::from((
+            self.index.saturating_sub(1),
             price,
-            event_type: PositionEventType::Open(side),
-        });
+            PositionEventType::Open(side),
+        )));
 
         Ok(())
     }
 
     pub fn close_position(&mut self, exit_price: f64) -> Result<f64> {
         if let Some(position) = self.position.take() {
-            let value = match position.side {
+            let value = match position.side() {
                 PositionSide::Long => {
-                    let value = exit_price * position.quantity;
+                    let value = exit_price * position.quantity();
                     self.balance += value;
                     value
                 }
                 PositionSide::Short => {
-                    self.balance -= position.entry_price * position.quantity;
-                    let profit = (position.entry_price - exit_price) * position.quantity;
+                    self.balance -= position.entry_price() * position.quantity();
+                    let profit = (position.entry_price() - exit_price) * position.quantity();
                     self.balance += profit;
                     profit
                 }
             };
 
-            self.position_history.push(PositionEvent {
-                candle_index: self.index.saturating_sub(1),
-                price: exit_price,
-                event_type: PositionEventType::Close,
-            });
+            self.position_history.push(PositionEvent::from((
+                self.index.saturating_sub(1),
+                exit_price,
+                PositionEventType::Close,
+            )));
             return Ok(value);
         }
 
         Err(Error::msg("No opened position"))
+    }
+
+    pub fn reset(&mut self) {
+        self.index = 0;
     }
 }
 
@@ -185,27 +102,9 @@ mod tests {
 
     fn get_data() -> Vec<Candle> {
         vec![
-            Candle {
-                open: 100.0,
-                high: 111.0,
-                low: 99.0,
-                close: 110.0,
-                volume: 1.0,
-            },
-            Candle {
-                open: 110.0,
-                high: 112.0,
-                low: 100.0,
-                close: 120.0,
-                volume: 1.0,
-            },
-            Candle {
-                open: 120.0,
-                high: 121.0,
-                low: 100.0,
-                close: 110.0,
-                volume: 1.0,
-            },
+            Candle::from((100.0, 111.0, 99.0, 110.0, 1.0)),
+            Candle::from((110.0, 112.0, 100.0, 120.0, 1.0)),
+            Candle::from((120.0, 121.0, 100.0, 110.0, 1.0)),
         ]
     }
 

@@ -1,10 +1,23 @@
+#![allow(dead_code)]
+
 use std::{fs::File, io::BufReader, path::PathBuf};
 
 use anyhow::{Error, Result};
 use chrono::{DateTime, Utc, serde::ts_microseconds};
 use serde::Deserialize;
-use ta::{Close, High, Low, Open, Volume};
 
+// "open_time": 1759813200000,
+// "open_price": 124499.99,
+// "high_price": 124640.76,
+// "low_price": 124240.37,
+// "close_price": 124414.17,
+// "volume": 424.20697,
+// "close_time": 1759816799999,
+// "quote_asset_volume": 52795455.4981537,
+// "number_of_trades": 102055,
+// "taker_buy_base_volume": 211.69336,
+// "taker_buy_quote_volume": 26344187.9144172,
+// "ignore": 0.0
 #[derive(Debug, Deserialize, Clone)]
 pub struct Data {
     #[serde(alias = "open_price")]
@@ -17,38 +30,49 @@ pub struct Data {
     close: f64,
     #[serde(rename = "quote_asset_volume")]
     volume: f64,
-    #[allow(dead_code)]
+    #[serde(rename = "taker_buy_quote_volume")]
+    ask: f64,
     #[serde(with = "ts_microseconds")]
     open_time: DateTime<Utc>,
+    #[serde(with = "ts_microseconds")]
+    close_time: DateTime<Utc>,
 }
 
-impl Open for Data {
-    fn open(&self) -> f64 {
+impl Data {
+    pub fn open(&self) -> f64 {
         self.open
     }
-}
 
-impl High for Data {
-    fn high(&self) -> f64 {
+    pub fn high(&self) -> f64 {
         self.high
     }
-}
 
-impl Low for Data {
-    fn low(&self) -> f64 {
+    pub fn low(&self) -> f64 {
         self.low
     }
-}
 
-impl Close for Data {
-    fn close(&self) -> f64 {
+    pub fn close(&self) -> f64 {
         self.close
     }
-}
 
-impl Volume for Data {
-    fn volume(&self) -> f64 {
+    pub fn volume(&self) -> f64 {
         self.volume
+    }
+
+    pub fn ask(&self) -> f64 {
+        self.ask
+    }
+
+    pub fn bid(&self) -> f64 {
+        self.volume - self.ask
+    }
+
+    pub fn open_time(&self) -> DateTime<Utc> {
+        self.open_time
+    }
+
+    pub fn close_time(&self) -> DateTime<Utc> {
+        self.close_time
     }
 }
 
