@@ -10,6 +10,7 @@ use crate::errors::{Error, Result};
 pub struct Backtest {
     data: Vec<Candle>,
     positions: Vec<Position>,
+    _balance: f64,
     balance: f64,
     index: usize,
     position_history: Vec<PositionEvent>,
@@ -19,18 +20,19 @@ impl Backtest {
     pub fn new(data: Vec<Candle>, initial_balance: f64) -> Self {
         Self {
             data,
+            index: 0,
             positions: Vec::new(),
             balance: initial_balance,
-            index: 0,
+            _balance: initial_balance,
             position_history: Vec::new(),
         }
     }
 
-    pub fn balance(&self) -> f64 {
+    pub fn current_balance(&self) -> f64 {
         self.balance
     }
 
-    pub fn portfolio_value(&self, current_price: f64) -> f64 {
+    pub fn total_balance(&self, current_price: f64) -> f64 {
         let positions_value: f64 = self
             .positions
             .iter()
@@ -50,7 +52,7 @@ impl Backtest {
         self.position_history.clone()
     }
 
-    pub fn open_position(&mut self, position: Position) -> Result<Position> {
+    pub fn open_position(&mut self, position: Position) -> Result<()> {
         let (side, price, quantity) =
             (position.side(), position.entry_price(), position.quantity());
         let cost = price * quantity;
@@ -64,16 +66,12 @@ impl Backtest {
             PositionSide::Short => self.balance += cost,
         }
 
-        let position_evt = PositionEvent::from((
-            self.index.saturating_sub(1),
-            price,
-            PositionEventType::Open(side),
-        ));
+        let position_evt = PositionEvent::from((self.index, price, PositionEventType::Open(side)));
 
-        self.positions.push(position.clone());
+        self.positions.push(position);
         self.position_history.push(position_evt);
 
-        Ok(position)
+        Ok(())
     }
 
     pub fn close_position(&mut self, position_id: u32, exit_price: f64) -> Result<f64> {
@@ -94,7 +92,7 @@ impl Backtest {
             };
 
             self.position_history.push(PositionEvent::from((
-                self.index.saturating_sub(1),
+                self.index,
                 exit_price,
                 PositionEventType::Close,
             )));
@@ -106,6 +104,9 @@ impl Backtest {
 
     pub fn reset(&mut self) {
         self.index = 0;
+        self.positions = Vec::new();
+        self.balance = self._balance;
+        self.position_history = Vec::new();
     }
 }
 

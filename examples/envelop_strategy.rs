@@ -23,11 +23,10 @@ fn main() -> Result<()> {
         let (high, low) = (candle.high(), candle.low());
 
         if low < long_limit {
-            let quantity = bt.balance().how_many(15.0) / long_limit;
-            if let Result::Ok(pos) =
-                bt.open_position((PositionSide::Long, long_limit, quantity).into())
-            {
-                println!("opened {}", pos.id());
+            let quantity = bt.current_balance().how_many(15.0) / long_limit;
+            let position = Position::from((PositionSide::Long, long_limit, quantity));
+            if let Result::Ok(_) = bt.open_position(position.clone()) {
+                println!("opened {}", position.id());
             }
         }
 
@@ -50,7 +49,7 @@ fn main() -> Result<()> {
     let f = candles.first().unwrap();
     let l = candles.last().unwrap();
     let buy_and_hold = 100.0 * (initial_balance * l.close() / f.close()) / initial_balance;
-    let new_balance = bt.balance();
+    let new_balance = bt.current_balance();
     let performance = 100.0 * new_balance / initial_balance;
     let performance = if performance < 100.0 {
         -(100.0 - performance)
