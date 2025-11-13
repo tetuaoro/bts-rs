@@ -45,6 +45,10 @@ impl Position {
         self.id
     }
 
+    pub(crate) fn set_id(&mut self, id: ID) {
+        self.id = id;
+    }
+
     pub fn side(&self) -> PositionSide {
         self.side.clone()
     }
@@ -89,19 +93,6 @@ impl From<P1> for Position {
     fn from((side, entry_price, quantity, exit_rule): P1) -> Self {
         Self {
             id: Self::random_id(),
-            side,
-            quantity,
-            exit_rule,
-            entry_price,
-        }
-    }
-}
-
-type P2 = (ID, PositionSide, f64, f64, PositionExitRule);
-impl From<P2> for Position {
-    fn from((id, side, entry_price, quantity, exit_rule): P2) -> Self {
-        Self {
-            id,
             side,
             quantity,
             exit_rule,

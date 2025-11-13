@@ -24,12 +24,16 @@ fn main() -> Result<()> {
 
         if low < long_limit {
             let quantity = bt.current_balance().how_many(15.0) / long_limit;
-            let position = Position::from((PositionSide::Long, long_limit, quantity, PositionExitRule::Market));
-            _ = bt.open_position(position.clone());
+            let position = (
+                PositionSide::Long,
+                long_limit,
+                quantity,
+                PositionExitRule::Market,
+            );
+            _ = bt.open_position(position.into());
         }
 
-        let positions = bt.open_positions();
-        positions
+        bt.open_positions()
             .iter()
             .filter(|p| {
                 let profit = p.profit_change(close);

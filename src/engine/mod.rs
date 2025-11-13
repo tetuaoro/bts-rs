@@ -76,9 +76,12 @@ impl Backtest {
             PositionSide::Short => self.balance -= cost,
         }
 
-        let event = PositionEvent::from((position.id(), self.index, side, price));
+        let mut position = position;
+        position.set_id(self.index as u32);
+
+        let event = (position.id(), self.index, side, price);
         self.positions.push(position);
-        self.position_history.push(event);
+        self.position_history.push(event.into());
 
         Ok(())
     }

@@ -25,14 +25,14 @@ fn main() -> Result<()> {
         let MovingAverageConvergenceDivergenceOutput { histogram, .. } = macd.next(close);
 
         if close > output && histogram > 0.0 {
-            let quantity = bt.current_balance().how_many(2.0) / close;
-            let position = Position::from((
+            let quantity = bt.current_balance().how_many(15.0) / close;
+            let position = (
                 PositionSide::Long,
                 close,
                 quantity,
                 PositionExitRule::Limit(close),
-            ));
-            _ = bt.open_position(position);
+            );
+            _ = bt.open_position(position.into());
         }
 
         bt.open_positions()
