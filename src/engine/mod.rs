@@ -3,6 +3,8 @@ mod order;
 mod position;
 mod wallet;
 
+use std::slice::Iter;
+
 use crate::{
     PercentCalculus,
     errors::{Error, Result},
@@ -26,10 +28,10 @@ pub enum Event {
 pub struct Backtest {
     index: usize,
     wallet: Wallet,
-    pub events: Vec<Event>,
+    events: Vec<Event>,
     orders: Vec<Order>,
-    pub data: Vec<Candle>,
-    pub positions: Vec<Position>,
+    data: Vec<Candle>,
+    positions: Vec<Position>,
 }
 
 impl std::ops::Deref for Backtest {
@@ -43,22 +45,35 @@ impl std::ops::Deref for Backtest {
 impl Backtest {
     /// Creates a new backtest instance with the given candle data.
     pub fn new(data: Vec<Candle>, initial_balance: f64) -> Result<Self> {
-        let wallet = Wallet::new(initial_balance)?;
+        if data.is_empty() {
+            return Err(Error::CandleDataEmpty);
+        }
 
         Ok(Self {
             data,
-            wallet,
             index: 0,
             events: Vec::new(),
             orders: Vec::new(),
             positions: Vec::new(),
+            wallet: Wallet::new(initial_balance)?,
         })
+    }
+
+    pub fn orders(&self) -> Iter<'_, Order> {
+        self.orders.iter()
+    }
+
+    pub fn positions(&self) -> Iter<'_, Position> {
+        self.positions.iter()
+    }
+
+    pub fn events(&self) -> Iter<'_, Event> {
+        self.events.iter()
     }
 
     /// Places a new order.
     pub fn place_order(&mut self, order: Order) -> Result<()> {
-        let cost = order.cost();
-        self.wallet.lock(cost)?;
+        self.wallet.lock(order.cost())?;
         self.orders.push(order.clone());
         self.events.push(Event::AddOrder(order));
         Ok(())
@@ -67,9 +82,9 @@ impl Backtest {
     /// Deletes a pending order.
     pub fn delete_order(&mut self, order: &Order) -> Result<()> {
         if let Some(order_idx) = self.orders.iter().position(|o| o == order) {
-            _ = self.orders.remove(order_idx);
+            let order = self.orders.remove(order_idx);
             self.wallet.unlock(order.cost())?;
-            self.events.push(Event::DelOrder(order.to_owned()));
+            self.events.push(Event::DelOrder(order));
             return Ok(());
         }
         Err(Error::OrderNotFound)

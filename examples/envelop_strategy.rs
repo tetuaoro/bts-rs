@@ -45,8 +45,7 @@ fn main() -> anyhow::Result<()> {
 
     let n = candles.len();
     let close_position_events = bt
-        .events
-        .iter()
+        .events()
         .filter(|e| matches!(e, Event::DelPosition(_)))
         .count();
     println!("trades {close_position_events} / {n}");
@@ -57,7 +56,6 @@ fn main() -> anyhow::Result<()> {
 
     let buy_and_hold = (initial_balance / first_price) * last_price;
     let buy_and_hold_perf = first_price.change(last_price);
-
     println!("buy and hold {buy_and_hold:.2} ({buy_and_hold_perf:.2}%)");
 
     Ok(())

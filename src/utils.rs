@@ -78,6 +78,7 @@ impl Data {
 }
 
 #[cfg(feature = "serde")]
+/// Reads data from `filepath` and returns an array of `Data`.
 pub fn get_data_from_file(filepath: std::path::PathBuf) -> crate::errors::Result<Vec<Data>> {
     use crate::errors::Error;
     use std::{fs::File, io::BufReader};
@@ -85,4 +86,9 @@ pub fn get_data_from_file(filepath: std::path::PathBuf) -> crate::errors::Result
     let file = File::open(filepath)?;
     let reader = BufReader::new(file);
     serde_json::from_reader(reader).map_err(Error::from)
+}
+
+/// Generates a random ID.
+pub fn random_id() -> u32 {
+    rand::random()
 }

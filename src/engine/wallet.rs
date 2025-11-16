@@ -16,7 +16,7 @@ impl Wallet {
     /// Negative balances are set to 0.
     pub fn new(balance: f64) -> Result<Self> {
         if balance <= 0.0 {
-            return Err(Error::NegZeroBalance);
+            return Err(Error::NegZeroBalance(balance));
         }
 
         Ok(Self {
@@ -34,10 +34,12 @@ impl Wallet {
     /// Returns the free balance (available for new trades).
     pub fn free_balance(&self) -> Result<f64> {
         let free_balance = self.balance - self.locked;
-        if free_balance.is_sign_negative() {
-            return Err(Error::NegZeroBalance);
+        if free_balance < 0.0 {
+            return Err(Error::Unreachable(format!(
+                "Negative free balance: balance={}, locked={}",
+                self.balance, self.locked
+            )));
         }
-
         Ok(free_balance)
     }
 
@@ -56,15 +58,31 @@ impl Wallet {
     }
 
     /// Locks additional funds for a position.
-    pub(crate) fn lock(&mut self, amount: f64) -> Result<f64> {
+    pub(crate) fn lock(&mut self, amount: f64) -> Result<()> {
+        if amount <= 0.0 {
+            return Err(Error::NegZeroBalance(amount));
+        }
+        let free_balance = self.free_balance()?;
+        if free_balance < amount {
+            return Err(Error::InsufficientFunds(amount, free_balance));
+        }
         self.locked += amount;
-        self.free_balance()
+        Ok(())
     }
 
     /// Unlocks funds when an order/position is closed.
-    pub(crate) fn unlock(&mut self, amount: f64) -> Result<f64> {
+    pub(crate) fn unlock(&mut self, amount: f64) -> Result<()> {
+        if amount <= 0.0 {
+            return Err(Error::NegZeroBalance(amount));
+        }
+        if self.locked - amount < 0.0 {
+            return Err(Error::Unreachable(format!(
+                "Locked funds {} are insufficient for amount {}",
+                self.locked, amount
+            )));
+        }
         self.locked -= amount;
-        self.free_balance()
+        Ok(())
     }
 
     /// Resets the wallet to its initial balance.
@@ -74,105 +92,148 @@ impl Wallet {
     }
 }
 
+#[cfg(test)]
 #[test]
-fn test_new_instance() {
-    if let Ok(_) = Wallet::new(100.0) {
-        assert!(true);
-    }
-
-    if let Err(_) = Wallet::new(0.0) {
-        assert!(true);
-    }
+fn new_wallet_valid_balance() {
+    let wallet = Wallet::new(100.0).unwrap();
+    assert_eq!(wallet.balance(), 100.0);
+    assert_eq!(wallet.free_balance().unwrap(), 100.0);
+    assert_eq!(wallet.locked, 0.0);
 }
 
+#[cfg(test)]
 #[test]
-fn test_cancel_order() {
-    if let Ok(mut wallet) = Wallet::new(100.0) {
-        // place order
-        if let Ok(_free_balance) = wallet.lock(20.0) {
-            assert_eq!(wallet.balance, 100.0);
-            assert_eq!(wallet.locked, 20.0);
-        } else {
-            assert!(false);
-        }
+fn new_wallet_invalid_balance() {
+    let result = Wallet::new(0.0);
+    assert!(matches!(result, Err(Error::NegZeroBalance(_))));
 
-        // cancel order
-        if let Ok(_free_balance) = wallet.unlock(20.0) {
-            assert_eq!(wallet.balance, 100.0);
-            assert_eq!(wallet.locked, 0.0);
-        } else {
-            assert!(false);
-        }
-    } else {
-        assert!(false);
-    }
+    let result = Wallet::new(-10.0);
+    assert!(matches!(result, Err(Error::NegZeroBalance(_))));
 }
 
+#[cfg(test)]
 #[test]
-fn test_open_close_profit_position() {
-    if let Ok(mut wallet) = Wallet::new(100.0) {
-        // place order
-        let locked_amount = 20.0;
-        if let Ok(free_balance) = wallet.lock(locked_amount) {
-            assert_eq!(free_balance, 80.0);
-            assert_eq!(wallet.balance, 100.0);
-            assert_eq!(wallet.locked, 20.0);
-        } else {
-            assert!(false);
-        }
-
-        // open position
-        if let Ok(free_balance) = wallet.sub(locked_amount) {
-            assert_eq!(free_balance, 80.0);
-            assert_eq!(wallet.locked, 0.0);
-            assert_eq!(wallet.free_balance().unwrap(), 80.0);
-        } else {
-            assert!(false);
-        }
-
-        // close profitable position
-        let profit = 10.0;
-        if let Ok(free_balance) = wallet.add(profit + locked_amount) {
-            assert_eq!(free_balance, 110.0);
-            assert_eq!(wallet.balance, 110.0);
-            assert_eq!(wallet.locked, 0.0);
-        } else {
-            assert!(false);
-        }
-    } else {
-        assert!(false);
-    }
+fn unlock_funds_invalid() {
+    let mut wallet = Wallet::new(100.0).unwrap();
+    let result = wallet.unlock(20.0);
+    assert!(matches!(result, Err(Error::Unreachable(_))));
 }
 
+#[cfg(test)]
 #[test]
-fn test_open_close_loss_position() -> Result<()> {
-    if let Ok(mut wallet) = Wallet::new(100.0) {
-        // place order
-        let locked_amount = 20.0;
-        if let Ok(free_balance) = wallet.lock(locked_amount) {
-            assert_eq!(free_balance, 80.0);
-            assert_eq!(wallet.balance, 100.0);
-            assert_eq!(wallet.locked, 20.0);
-        } else {
-            assert!(false);
-        }
+fn lock_and_unlock_funds() {
+    let mut wallet = Wallet::new(100.0).unwrap();
 
-        // open position
-        if let Ok(free_balance) = wallet.sub(locked_amount) {
-            assert_eq!(free_balance, 80.0);
-            assert_eq!(wallet.locked, 0.0);
-            assert_eq!(wallet.free_balance().unwrap(), 80.0);
-        } else {
-            assert!(false);
-        }
+    // Test lock
+    wallet.lock(20.0).unwrap();
+    assert_eq!(wallet.balance, 100.0);
+    assert_eq!(wallet.locked, 20.0);
 
-        // close unprofitable position
-        let profit = -30.0;
-        let free_balance = wallet.add(profit + locked_amount)?;
-        assert_eq!(free_balance, 70.0);
-        assert_eq!(wallet.balance, 70.0);
-        assert_eq!(wallet.locked, 0.0);
-    }
+    // Test unlock
+    wallet.unlock(20.0).unwrap();
+    assert_eq!(wallet.balance, 100.0);
+    assert_eq!(wallet.locked, 0.0);
+}
 
-    Ok(())
+#[cfg(test)]
+#[test]
+fn lock_insufficient_funds() {
+    let mut wallet = Wallet::new(100.0).unwrap();
+    let result = wallet.lock(150.0);
+    assert!(matches!(result, Err(Error::InsufficientFunds(_, _))));
+}
+
+#[cfg(test)]
+#[test]
+fn lock_invalid_amount() {
+    let mut wallet = Wallet::new(100.0).unwrap();
+    let result = wallet.lock(-10.0);
+    assert!(matches!(result, Err(Error::NegZeroBalance(_))));
+}
+
+#[cfg(test)]
+#[test]
+fn sub_funds() {
+    let mut wallet = Wallet::new(100.0).unwrap();
+    // place order
+    wallet.lock(20.0).unwrap();
+
+    // open position
+    let free_balance = wallet.sub(20.0).unwrap();
+    assert_eq!(free_balance, 80.0);
+    assert_eq!(wallet.balance, 80.0);
+    assert_eq!(wallet.locked, 0.0);
+}
+
+#[cfg(test)]
+#[test]
+fn add_funds() {
+    let mut wallet = Wallet::new(100.0).unwrap();
+    // close position
+    let free_balance = wallet.add(50.0).unwrap();
+    assert_eq!(free_balance, 150.0);
+    assert_eq!(wallet.balance, 150.0);
+    assert_eq!(wallet.locked, 0.0);
+}
+
+#[cfg(test)]
+#[test]
+fn reset_wallet() {
+    let mut wallet = Wallet::new(100.0).unwrap();
+    wallet.lock(20.0).unwrap();
+    wallet.sub(20.0).unwrap();
+    wallet.add(10.0).unwrap();
+
+    wallet.reset();
+    assert_eq!(wallet.balance, 100.0);
+    assert_eq!(wallet.locked, 0.0);
+    assert_eq!(wallet.free_balance().unwrap(), 100.0);
+}
+
+#[cfg(test)]
+#[test]
+fn open_close_profit_position() {
+    let mut wallet = Wallet::new(100.0).unwrap();
+
+    // place order
+    wallet.lock(20.0).unwrap();
+    assert_eq!(wallet.balance, 100.0);
+    assert_eq!(wallet.locked, 20.0);
+    assert_eq!(wallet.free_balance().unwrap(), 80.0);
+
+    // open position
+    wallet.sub(20.0).unwrap();
+    assert_eq!(wallet.balance, 80.0);
+    assert_eq!(wallet.locked, 0.0);
+    assert_eq!(wallet.free_balance().unwrap(), 80.0);
+
+    // close profitable position
+    wallet.add(30.0).unwrap(); // 20.0 (initial locked) + 10.0 (profit)
+    assert_eq!(wallet.balance, 110.0);
+    assert_eq!(wallet.locked, 0.0);
+    assert_eq!(wallet.free_balance().unwrap(), 110.0);
+}
+
+#[cfg(test)]
+#[test]
+fn open_close_loss_position() {
+    let mut wallet = Wallet::new(100.0).unwrap();
+
+    // place order
+    wallet.lock(20.0).unwrap();
+    assert_eq!(wallet.balance, 100.0);
+    assert_eq!(wallet.locked, 20.0);
+    assert_eq!(wallet.free_balance().unwrap(), 80.0);
+
+    // open position
+    wallet.sub(20.0).unwrap();
+    assert_eq!(wallet.balance, 80.0);
+    assert_eq!(wallet.locked, 0.0);
+    assert_eq!(wallet.free_balance().unwrap(), 80.0);
+
+    // close unprofitable position
+    wallet.add(10.0).unwrap(); // 20.0 (initial locked) - 10.0 (loss)
+    assert_eq!(wallet.balance, 90.0);
+    assert_eq!(wallet.locked, 0.0);
+    assert_eq!(wallet.free_balance().unwrap(), 90.0);
 }

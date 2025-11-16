@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
 
         let free_balance = bt.free_balance()?;
         // max trade: 3.69245%, max profit: 100%
-        let amount = free_balance.how_many(3.69245);
+        let amount = free_balance.how_many(100.0);
 
         // 21: minimum to trade
         if amount > 21.0 && close > output && histogram > 0.0 {
@@ -51,8 +51,7 @@ fn main() -> anyhow::Result<()> {
 
     let n = candles.len();
     let close_position_events = bt
-        .events
-        .iter()
+        .events()
         .filter(|e| matches!(e, Event::DelPosition(_)))
         .count();
     println!("trades {close_position_events} / {n}");
@@ -63,7 +62,6 @@ fn main() -> anyhow::Result<()> {
 
     let buy_and_hold = (initial_balance / first_price) * last_price;
     let buy_and_hold_perf = first_price.change(last_price);
-
     println!("buy and hold {buy_and_hold:.2} ({buy_and_hold_perf:.2}%)");
 
     Ok(())

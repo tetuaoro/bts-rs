@@ -1,12 +1,14 @@
+use crate::utils::random_id;
+
 /// Represents the side of an order (buy or sell).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum OrderSide {
     Buy,
     Sell,
 }
 
 /// Represents the type of an order (market, limit, take-profit/stop-loss, trailing stop).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum OrderType {
     Market(f64),
     Limit(f64),
@@ -25,12 +27,19 @@ impl OrderType {
 }
 
 /// Represents an order with entry and exit rules.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Order {
+    id: u32,
     entry_type: OrderType,
     pub quantity: f64,
     pub side: OrderSide,
     exit_type: Option<OrderType>,
+}
+
+impl PartialEq for Order {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 type O1 = (OrderType, f64, OrderSide);
@@ -38,6 +47,7 @@ type O2 = (OrderType, OrderType, f64, OrderSide);
 impl From<O1> for Order {
     fn from((entry_type, quantity, side): O1) -> Self {
         Self {
+            id: random_id(),
             entry_type,
             quantity,
             side,
@@ -49,6 +59,7 @@ impl From<O1> for Order {
 impl From<O2> for Order {
     fn from((entry_type, exit_type, quantity, side): O2) -> Self {
         Self {
+            id: random_id(),
             entry_type,
             quantity,
             side,
@@ -95,4 +106,145 @@ impl Order {
             }
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn create_simple_order() {
+    let entry_type = OrderType::Market(100.0);
+    let quantity = 2.0;
+    let side = OrderSide::Buy;
+    let order: Order = (entry_type, quantity, side).into();
+
+    assert_eq!(order.entry_price(), 100.0);
+    assert_eq!(order.quantity, 2.0);
+    assert_eq!(order.cost(), 200.0);
+    assert!(matches!(order.side, OrderSide::Buy));
+    assert!(order.exit_rule().is_none());
+}
+
+#[cfg(test)]
+#[test]
+fn create_order_with_exit_rule() {
+    let entry_type = OrderType::Limit(100.0);
+    let exit_type = OrderType::TakeProfitAndStopLoss(120.0, 90.0);
+    let quantity = 1.5;
+    let side = OrderSide::Sell;
+    let order: Order = (entry_type, exit_type, quantity, side).into();
+
+    assert_eq!(order.entry_price(), 100.0);
+    assert_eq!(order.quantity, 1.5);
+    assert_eq!(order.cost(), 150.0);
+    assert!(matches!(order.side, OrderSide::Sell));
+    assert!(matches!(
+        order.exit_rule(),
+        Some(OrderType::TakeProfitAndStopLoss(120.0, 90.0))
+    ));
+}
+
+#[cfg(test)]
+#[test]
+fn order_equality() {
+    let order1: Order = (OrderType::Market(100.0), 1.0, OrderSide::Buy).into();
+    let order2: Order = (OrderType::Market(100.0), 1.0, OrderSide::Buy).into();
+    assert_ne!(order1, order2);
+    assert_eq!(order1, order1);
+}
+
+#[cfg(test)]
+#[test]
+fn entry_price() {
+    let market_order: Order = (OrderType::Market(100.0), 1.0, OrderSide::Buy).into();
+    assert_eq!(market_order.entry_price(), 100.0);
+
+    let limit_order: Order = (OrderType::Limit(150.0), 1.0, OrderSide::Sell).into();
+    assert_eq!(limit_order.entry_price(), 150.0);
+}
+
+#[cfg(test)]
+#[test]
+fn order_cost() {
+    let order: Order = (OrderType::Market(100.0), 2.5, OrderSide::Buy).into();
+    assert_eq!(order.cost(), 250.0);
+
+    let order: Order = (OrderType::Limit(200.0), 0.5, OrderSide::Sell).into();
+    assert_eq!(order.cost(), 100.0);
+}
+
+#[cfg(test)]
+#[test]
+fn set_trailingstop_buy() {
+    let mut order: Order = (
+        OrderType::Market(100.0),
+        OrderType::TrailingStop(95.0, 5.0),
+        1.0,
+        OrderSide::Buy,
+    )
+        .into();
+
+    order.set_trailingstop(90.0);
+    if let Some(OrderType::TrailingStop(price, _)) = order.exit_rule() {
+        assert_eq!(*price, 95.0);
+    } else {
+        panic!("Expected TrailingStop order type");
+    }
+
+    order.set_trailingstop(105.0);
+    if let Some(OrderType::TrailingStop(price, _)) = order.exit_rule() {
+        assert_eq!(*price, 105.0);
+    } else {
+        panic!("Expected TrailingStop order type");
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn set_trailingstop_sell() {
+    let mut order: Order = (
+        OrderType::Market(100.0),
+        OrderType::TrailingStop(105.0, 5.0),
+        1.0,
+        OrderSide::Sell,
+    )
+        .into();
+
+    order.set_trailingstop(110.0);
+    if let Some(OrderType::TrailingStop(price, _)) = order.exit_rule() {
+        assert_eq!(*price, 105.0);
+    } else {
+        panic!("Expected TrailingStop order type");
+    }
+
+    order.set_trailingstop(95.0);
+    if let Some(OrderType::TrailingStop(price, _)) = order.exit_rule() {
+        assert_eq!(*price, 95.0);
+    } else {
+        panic!("Expected TrailingStop order type");
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn set_trailingstop_no_exit_rule() {
+    let mut order: Order = (OrderType::Market(100.0), 1.0, OrderSide::Buy).into();
+    order.set_trailingstop(150.0);
+    assert!(order.exit_rule().is_none());
+}
+
+#[cfg(test)]
+#[test]
+fn order_type_inner() {
+    let market_order = OrderType::Market(100.0);
+    assert_eq!(market_order.inner(), 100.0);
+
+    let limit_order = OrderType::Limit(150.0);
+    assert_eq!(limit_order.inner(), 150.0);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn order_type_inner_panics() {
+    let take_profit_order = OrderType::TakeProfitAndStopLoss(120.0, 90.0);
+    take_profit_order.inner();
 }
