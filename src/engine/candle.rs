@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +18,8 @@ pub struct Candle {
     close: f64,
     volume: f64,
     bid: f64,
+    open_time: DateTime<Utc>,
+    close_time: DateTime<Utc>,
 }
 
 impl Candle {
@@ -57,6 +60,16 @@ impl Candle {
         self.volume - self.bid
     }
 
+    /// Returns the open time of the candle.
+    pub fn open_time(&self) -> DateTime<Utc> {
+        self.open_time
+    }
+
+    /// Returns the close time of the candle.
+    pub fn close_time(&self) -> DateTime<Utc> {
+        self.close_time
+    }
+
     /// Checks if the candle is bullish (close > open).
     pub fn is_bullish(&self) -> bool {
         self.close > self.open
@@ -77,6 +90,8 @@ pub struct CandleBuilder {
     close: Option<f64>,
     volume: Option<f64>,
     bid: Option<f64>,
+    open_time: Option<DateTime<Utc>>,
+    close_time: Option<DateTime<Utc>>,
 }
 
 impl CandleBuilder {
@@ -89,6 +104,8 @@ impl CandleBuilder {
             close: None,
             volume: None,
             bid: None,
+            open_time: None,
+            close_time: None,
         }
     }
 
@@ -128,6 +145,17 @@ impl CandleBuilder {
         self
     }
 
+    /// Sets the open time.
+    pub fn open_time(mut self, ot: DateTime<Utc>) -> Self {
+        self.open_time = Some(ot);
+        self
+    }
+    /// Sets the close time.
+    pub fn close_time(mut self, ct: DateTime<Utc>) -> Self {
+        self.close_time = Some(ct);
+        self
+    }
+
     /// Builds a `Candle` after validating the data.
     ///
     /// # Errors
@@ -142,6 +170,8 @@ impl CandleBuilder {
         let low = self.low.ok_or(Error::MissingField("low"))?;
         let close = self.close.ok_or(Error::MissingField("close"))?;
         let volume = self.volume.ok_or(Error::MissingField("volume"))?;
+        let open_time = self.open_time.ok_or(Error::MissingField("open time"))?;
+        let close_time = self.close_time.ok_or(Error::MissingField("close time"))?;
 
         // Validate prices
         if !(low <= open && low <= close && low <= high && high >= open && high >= close && low >= 0.0) {
@@ -153,6 +183,11 @@ impl CandleBuilder {
             return Err(Error::NegativeVolume(volume));
         }
 
+        // Valideta times
+        if open_time > close_time {
+            return Err(Error::InvalideTimes(open_time, close_time));
+        }
+
         Ok(Candle {
             open,
             high,
@@ -160,6 +195,8 @@ impl CandleBuilder {
             close,
             volume,
             bid: self.bid.unwrap_or(0.0), // 0.0 if not provided
+            open_time,
+            close_time,
         })
     }
 }
@@ -174,6 +211,8 @@ fn candle_accessors() {
         .close(105.0)
         .volume(1000.0)
         .bid(104.5)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
@@ -184,6 +223,7 @@ fn candle_accessors() {
     assert_eq!(candle.volume(), 1000.0);
     assert_eq!(candle.bid(), 104.5);
     assert_eq!(candle.ask(), 1000.0 - 104.5); // volume - bid
+    assert!(candle.open_time() < candle.close_time())
 }
 
 #[cfg(test)]
@@ -195,6 +235,8 @@ fn candle_type_detection() {
         .low(95.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let bearish = CandleBuilder::builder()
@@ -203,6 +245,8 @@ fn candle_type_detection() {
         .low(95.0)
         .close(100.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let neutral = CandleBuilder::builder()
@@ -211,6 +255,8 @@ fn candle_type_detection() {
         .low(100.0)
         .close(100.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
@@ -234,6 +280,8 @@ fn candle_builder_valid() {
         .close(105.0)
         .volume(1000.0)
         .bid(104.5)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
@@ -254,6 +302,8 @@ fn candle_builder_missing_fields() {
         .low(95.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::MissingField("open"))));
 
@@ -263,6 +313,8 @@ fn candle_builder_missing_fields() {
         .low(95.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::MissingField("high"))));
 
@@ -272,6 +324,8 @@ fn candle_builder_missing_fields() {
         .high(110.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::MissingField("low"))));
 
@@ -281,6 +335,8 @@ fn candle_builder_missing_fields() {
         .high(110.0)
         .low(95.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::MissingField("close"))));
 
@@ -290,8 +346,31 @@ fn candle_builder_missing_fields() {
         .high(110.0)
         .low(95.0)
         .close(105.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::MissingField("volume"))));
+
+    // Missing open time
+    let result = CandleBuilder::builder()
+        .open(100.0)
+        .high(110.0)
+        .low(95.0)
+        .close(105.0)
+        .volume(1000.0)
+        .build();
+    assert!(matches!(result, Err(Error::MissingField("open time"))));
+
+    // Missing close time
+    let result = CandleBuilder::builder()
+        .open(100.0)
+        .high(110.0)
+        .low(95.0)
+        .close(105.0)
+        .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .build();
+    assert!(matches!(result, Err(Error::MissingField("close time"))));
 }
 
 #[cfg(test)]
@@ -304,6 +383,8 @@ fn candle_builder_invalid_prices() {
         .low(95.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::InvalidPriceOrder { .. })));
 
@@ -314,6 +395,8 @@ fn candle_builder_invalid_prices() {
         .low(110.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::InvalidPriceOrder { .. })));
 
@@ -324,6 +407,8 @@ fn candle_builder_invalid_prices() {
         .low(95.0)
         .close(110.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build(); // OK: 105 < 110
     assert!(matches!(result, Err(Error::InvalidPriceOrder { .. })));
 
@@ -334,6 +419,8 @@ fn candle_builder_invalid_prices() {
         .low(105.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::InvalidPriceOrder { .. })));
 }
@@ -347,6 +434,8 @@ fn candle_builder_negative_volume() {
         .low(95.0)
         .close(105.0)
         .volume(-1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build();
     assert!(matches!(result, Err(Error::NegativeVolume(-1000.0))));
 }
@@ -360,6 +449,8 @@ fn candle_builder_optional_bid() {
         .low(95.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     assert_eq!(candle.bid(), 0.0);
@@ -371,6 +462,8 @@ fn candle_builder_optional_bid() {
         .close(105.0)
         .volume(1000.0)
         .bid(104.5)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     assert_eq!(candle.bid(), 104.5);
@@ -386,6 +479,8 @@ fn candle_builder_chaining() {
         .close(105.0)
         .volume(1000.0)
         .bid(104.5)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
@@ -403,6 +498,8 @@ fn candle_ask_calculation() {
         .close(105.0)
         .volume(1000.0)
         .bid(104.5)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     assert_eq!(candle.ask(), 1000.0 - 104.5);
@@ -413,6 +510,8 @@ fn candle_ask_calculation() {
         .low(95.0)
         .close(105.0)
         .volume(1000.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     assert_eq!(candle.ask(), 1000.0 - 0.0);

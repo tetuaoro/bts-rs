@@ -1,9 +1,12 @@
 use std::ops::Range;
 
 use bts::engine::{Candle, CandleBuilder};
+use chrono::{DateTime, Duration};
 
 /// Generates deterministic candle data.
 pub fn generate_sample_candles(range: Range<i32>, seed: i32, base_price: f64) -> Vec<Candle> {
+    let mut open_time = DateTime::from_timestamp_secs(1515151515).unwrap();
+
     range
         .map(|i| {
             // Base price with trend (+ 0.5*i)
@@ -25,15 +28,22 @@ pub fn generate_sample_candles(range: Range<i32>, seed: i32, base_price: f64) ->
             // Bid price (slightly below close)
             let bid = close * 0.999;
 
-            CandleBuilder::builder()
+            let close_time = open_time + Duration::days(1);
+
+            let candle = CandleBuilder::builder()
                 .open(open)
                 .high(high)
                 .low(low)
                 .close(close)
                 .volume(volume)
                 .bid(bid)
+                .open_time(open_time)
+                .close_time(close_time)
                 .build()
-                .unwrap()
+                .unwrap();
+
+            open_time = close_time + Duration::microseconds(1);
+            candle
         })
         .collect()
 }

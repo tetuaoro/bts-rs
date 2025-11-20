@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+
 /// Enum representing possible errors in the crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -24,6 +26,10 @@ pub enum Error {
     /// Volume cannot be negative.
     #[error("Volume cannot be negative (got: {0})")]
     NegativeVolume(f64),
+
+    /// Open time and close time are not in valid order (open time < close time).
+    #[error("Invalid time order: open={0}, close={1}")]
+    InvalideTimes(DateTime<Utc>, DateTime<Utc>),
 
     /// The initial or current balance is not positive.
     ///

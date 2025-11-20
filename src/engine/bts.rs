@@ -1,3 +1,5 @@
+use chrono::DateTime;
+
 use super::*;
 
 fn get_data() -> Vec<Candle> {
@@ -7,6 +9,8 @@ fn get_data() -> Vec<Candle> {
         .low(99.0)
         .close(110.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
@@ -20,6 +24,8 @@ fn get_long_data() -> Vec<Candle> {
         .low(80.0)
         .close(100.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let candle2 = CandleBuilder::builder()
@@ -28,6 +34,8 @@ fn get_long_data() -> Vec<Candle> {
         .low(90.0)
         .close(110.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let candle3 = CandleBuilder::builder()
@@ -36,6 +44,8 @@ fn get_long_data() -> Vec<Candle> {
         .low(100.0)
         .close(120.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
@@ -49,6 +59,8 @@ fn get_short_data() -> Vec<Candle> {
         .low(131.0)
         .close(140.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let candle2 = CandleBuilder::builder()
@@ -57,6 +69,8 @@ fn get_short_data() -> Vec<Candle> {
         .low(121.0)
         .close(130.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let candle3 = CandleBuilder::builder()
@@ -65,6 +79,8 @@ fn get_short_data() -> Vec<Candle> {
         .low(111.0)
         .close(120.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
@@ -78,6 +94,8 @@ fn get_long_data_trailing_stop() -> Vec<Candle> {
         .low(98.0)
         .close(100.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let candle2 = CandleBuilder::builder()
@@ -86,6 +104,8 @@ fn get_long_data_trailing_stop() -> Vec<Candle> {
         .low(99.0)
         .close(108.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let candle3 = CandleBuilder::builder()
@@ -94,6 +114,8 @@ fn get_long_data_trailing_stop() -> Vec<Candle> {
         .low(108.0)
         .close(135.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let candle4 = CandleBuilder::builder()
@@ -102,6 +124,8 @@ fn get_long_data_trailing_stop() -> Vec<Candle> {
         .low(126.0)
         .close(130.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
@@ -115,6 +139,8 @@ fn get_long_data_trailing_stop_loss() -> Vec<Candle> {
         .low(98.0)
         .close(100.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
     let candle2 = CandleBuilder::builder()
@@ -123,6 +149,8 @@ fn get_long_data_trailing_stop_loss() -> Vec<Candle> {
         .low(90.0)
         .close(100.0)
         .volume(1.0)
+        .open_time(DateTime::from_timestamp_secs(1515151515).unwrap())
+        .close_time(DateTime::from_timestamp_secs(1515151516).unwrap())
         .build()
         .unwrap();
 
