@@ -188,6 +188,13 @@ impl Backtest {
         let total_amount = pnl + position.cost()?;
         self.wallet.add(total_amount)?;
         self.wallet.sub_pnl(total_amount);
+        if let Some((market_fee, limit_fee)) = self.market_fees {
+            if position.is_market_type() {
+                self.wallet.sub_fees(position.cost()? * market_fee)?;
+            } else {
+                self.wallet.sub_fees(position.cost()? * limit_fee)?;
+            };
+        }
         self.events.push(Event::DelPosition(position.clone()));
         Ok(pnl)
     }
