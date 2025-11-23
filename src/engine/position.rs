@@ -19,6 +19,8 @@ pub struct Position {
     id: u32,
     order: Order,
     pub side: PositionSide,
+    #[cfg(feature = "metrics")]
+    exit_price: Option<f64>,
 }
 
 impl PartialEq for Position {
@@ -31,11 +33,13 @@ impl From<Order> for Position {
     fn from(value: Order) -> Self {
         Self {
             id: random_id(),
+            #[cfg(feature = "metrics")]
+            exit_price: None,
+            order: value.clone(),
             side: match value.side {
                 OrderSide::Buy => PositionSide::Long,
                 OrderSide::Sell => PositionSide::Short,
             },
-            order: value,
         }
     }
 }
@@ -54,6 +58,21 @@ impl std::ops::DerefMut for Position {
 }
 
 impl Position {
+    #[cfg(feature = "metrics")]
+    pub(crate) fn set_exit_price(&mut self, exit_price: f64) -> Result<()> {
+        if exit_price < 0.0 {
+            return Err(Error::ExitPrice(exit_price));
+        }
+        self.exit_price = Some(exit_price);
+        Ok(())
+    }
+
+    #[cfg(feature = "metrics")]
+    pub(crate) fn pnl(&self) -> Result<f64> {
+        let exit_price = self.exit_price.ok_or(Error::ExitPrice(0.0))?;
+        self.estimate_pnl(exit_price)
+    }
+
     pub fn estimate_pnl(&self, exit_price: f64) -> Result<f64> {
         let pnl = match self.side {
             PositionSide::Long => (exit_price - self.entry_price()?) * self.quantity,

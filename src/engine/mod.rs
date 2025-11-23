@@ -10,6 +10,9 @@ use crate::{
     errors::{Error, Result},
 };
 
+#[cfg(feature = "metrics")]
+use crate::metrics::*;
+
 pub use candle::*;
 pub use order::*;
 pub use position::*;
@@ -29,20 +32,13 @@ impl Iterator for Backtest {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Event {
-    AddOrder(Order),
-    DelOrder(Order),
-    AddPosition(Position),
-    DelPosition(Position),
-}
-
 /// Backtesting engine for trading strategies.
 #[derive(Debug)]
 pub struct Backtest {
     index: usize,
     wallet: Wallet,
     data: Vec<Candle>,
+    #[cfg(feature = "metrics")]
     events: Vec<Event>,
     orders: VecDeque<Order>,
     positions: VecDeque<Position>,
@@ -90,6 +86,7 @@ impl Backtest {
             data,
             index: 0,
             market_fees,
+            #[cfg(feature = "metrics")]
             events: Vec::new(),
             orders: VecDeque::new(),
             positions: VecDeque::new(),
@@ -108,6 +105,7 @@ impl Backtest {
     }
 
     /// Returns an iterator over the recorded events.
+    #[cfg(feature = "metrics")]
     pub fn events(&self) -> std::slice::Iter<'_, Event> {
         self.events.iter()
     }
@@ -122,7 +120,18 @@ impl Backtest {
     pub fn place_order(&mut self, order: Order) -> Result<()> {
         self.wallet.lock(order.cost()?)?;
         self.orders.push_back(order.clone());
-        self.events.push(Event::AddOrder(order));
+        #[cfg(feature = "metrics")]
+        {
+            let wallet_event = Event::WalletUpdate {
+                locked: self.wallet.locked(),
+                fees: self.wallet.fees_paid(),
+                balance: self.wallet.balance(),
+                pnl: self.wallet.unrealized_pnl(),
+                free: self.wallet.free_balance()?,
+            };
+            self.events.push(wallet_event);
+            self.events.push(Event::AddOrder(order));
+        }
         Ok(())
     }
 
@@ -143,7 +152,18 @@ impl Backtest {
             self.orders.remove(order_idx).ok_or(Error::RemoveOrder)?;
         }
         self.wallet.unlock(order.cost()?)?;
-        self.events.push(Event::DelOrder(order.clone()));
+        #[cfg(feature = "metrics")]
+        {
+            let wallet_event = Event::WalletUpdate {
+                locked: self.wallet.locked(),
+                fees: self.wallet.fees_paid(),
+                balance: self.wallet.balance(),
+                free: self.wallet.free_balance()?,
+                pnl: self.wallet.unrealized_pnl(),
+            };
+            self.events.push(wallet_event);
+            self.events.push(Event::DelOrder(order.clone()));
+        }
         Ok(())
     }
 
@@ -158,7 +178,18 @@ impl Backtest {
             };
         }
         self.positions.push_back(position.clone());
-        self.events.push(Event::AddPosition(position));
+        #[cfg(feature = "metrics")]
+        {
+            let wallet_event = Event::WalletUpdate {
+                locked: self.wallet.locked(),
+                fees: self.wallet.fees_paid(),
+                balance: self.wallet.balance(),
+                free: self.wallet.free_balance()?,
+                pnl: self.wallet.unrealized_pnl(),
+            };
+            self.events.push(wallet_event);
+            self.events.push(Event::AddPosition(position));
+        }
         Ok(())
     }
 
@@ -195,7 +226,20 @@ impl Backtest {
                 self.wallet.sub_fees(position.cost()? * limit_fee)?;
             };
         }
-        self.events.push(Event::DelPosition(position.clone()));
+        #[cfg(feature = "metrics")]
+        {
+            let wallet_event = Event::WalletUpdate {
+                locked: self.wallet.locked(),
+                fees: self.wallet.fees_paid(),
+                balance: self.wallet.balance(),
+                free: self.wallet.free_balance()?,
+                pnl: self.wallet.unrealized_pnl(),
+            };
+            self.events.push(wallet_event);
+            let mut position = position.clone();
+            position.set_exit_price(exit_price)?;
+            self.events.push(Event::DelPosition(position));
+        }
         Ok(pnl)
     }
 
@@ -348,7 +392,10 @@ impl Backtest {
     pub fn reset(&mut self) {
         self.index = 0;
         self.wallet.reset();
-        self.events = Vec::new();
+        #[cfg(feature = "metrics")]
+        {
+            self.events = Vec::new();
+        }
         self.orders = VecDeque::new();
         self.positions = VecDeque::new();
     }

@@ -20,11 +20,17 @@ pub mod engine;
 pub mod errors;
 pub mod utils;
 
+#[cfg(feature = "metrics")]
+pub mod metrics;
+
 pub mod prelude {
     pub use super::*;
     pub use crate::engine::*;
     pub use crate::errors::*;
     pub use crate::utils::*;
+
+    #[cfg(feature = "metrics")]
+    pub use crate::metrics::*;
 }
 
 use std::ops::{Add, Div, Mul, Sub};

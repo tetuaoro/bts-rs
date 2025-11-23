@@ -36,6 +36,21 @@ impl Wallet {
         })
     }
 
+    #[cfg(feature = "metrics")]
+    pub(crate) fn initial_balance(&self) -> f64 {
+        self.initial_balance
+    }
+
+    #[cfg(feature = "metrics")]
+    pub(crate) fn locked(&self) -> f64 {
+        self.locked
+    }
+
+    #[cfg(feature = "metrics")]
+    pub(crate) fn unrealized_pnl(&self) -> f64 {
+        self.unrealized_pnl
+    }
+
     /// Returns the balance.
     pub fn balance(&self) -> f64 {
         self.balance
