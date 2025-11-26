@@ -61,6 +61,18 @@ pub enum Event {
     },
 }
 
+impl From<&Wallet> for Event {
+    fn from(value: &Wallet) -> Self {
+        Self::WalletUpdate {
+            locked: value.locked(),
+            fees: value.fees_paid(),
+            balance: value.balance(),
+            pnl: value.unrealized_pnl(),
+            free: value.free_balance().expect("should give the free balance"),
+        }
+    }
+}
+
 /// A collection of trading metrics calculated from a series of events.
 ///
 /// `Metrics` is used to compute and display key performance indicators (KPIs)

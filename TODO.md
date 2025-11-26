@@ -8,9 +8,9 @@
 - [x] Market fees implementation
 - [x] Add `Candle` builder for validation
 - [x] Add `Metrics` struct to wrap metrics (P&L, drawdown, Sharpe)
+- [x] Timeframe/Volume aggregation (1H → 4H/8H/1D or 1D → 7D/1M)
 
 ## 📌 In Progress
-- [ ] Timeframe/Volume aggregation (1H → 4H/8H/1D or 1D → 7D/1M)
 ~~- [ ] Add methods to modify orders/positions (update SL/TP/trailing stop)~~
 
 ## 🚀 Road to v1.0.0
