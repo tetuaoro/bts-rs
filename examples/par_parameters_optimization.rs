@@ -70,7 +70,7 @@ fn main() -> anyhow::Result<()> {
 
     // Process in parallel
     params.par_chunks(1000).for_each(|chunk| {
-        let mut bt = Backtest::new(candles.clone(), initial_balance, None).unwrap();
+        let mut bts = Backtest::new(candles.clone(), initial_balance, None).unwrap();
 
         for &(ema_period, macd1, macd2, macd3) in chunk {
             shared.increment_iter();
@@ -79,7 +79,7 @@ fn main() -> anyhow::Result<()> {
             let mut ema = ExponentialMovingAverage::new(ema_period).unwrap();
             let mut macd = MovingAverageConvergenceDivergence::new(macd1, macd2, macd3).unwrap();
 
-            let result = bt.run(|bt, candle| {
+            let result = bts.run(|bt, candle| {
                 let close = candle.close();
                 let output = ema.next(close);
                 let MovingAverageConvergenceDivergenceOutput { histogram, .. } = macd.next(close);
@@ -100,7 +100,7 @@ fn main() -> anyhow::Result<()> {
                 Ok(())
             });
 
-            let current_balance = bt.total_balance();
+            let current_balance = bts.total_balance();
             let parameters = Parameters::from((ema_period, (macd1, macd2, macd3), current_balance));
 
             match result {
@@ -108,7 +108,7 @@ fn main() -> anyhow::Result<()> {
                 Err(_) => shared.push_result(parameters, true),
             }
 
-            bt.reset();
+            bts.reset();
         }
     });
 

@@ -16,7 +16,7 @@ use ta::{
 fn main() -> anyhow::Result<()> {
     let candles = utils::generate_sample_candles(3000, 42, 100.0);
     let initial_balance = 1_000.0;
-    let mut bt = Backtest::new(candles.clone(), initial_balance, None)?;
+    let mut bts = Backtest::new(candles.clone(), initial_balance, None)?;
     let mut ema = ExponentialMovingAverage::new(100)?;
     let mut macd = MovingAverageConvergenceDivergence::default();
 
@@ -29,10 +29,13 @@ fn main() -> anyhow::Result<()> {
     }
 
     let aggregator = TimeframeAggregator;
-    bt.run_with_aggregator(&aggregator, |bt, candles| {
-        let candle_one = candles.get(0).expect("hō'e");
-        let _candle_four = candles.get(1).expect("hō'e");
-        let _candle_eight = candles.get(2).expect("hō'e");
+    bts.run_with_aggregator(&aggregator, |bt, candles| {
+        let candle_one = candles.get(0).ok_or(Error::CandleNotFound)?;
+        let _candle_four = candles.get(1);
+        let _candle_eight = candles.get(2);
+
+        if let Some(_c) = _candle_four {}
+        if let Some(_c) = _candle_eight {}
 
         let close = candle_one.close();
         let output = ema.next(close);
@@ -60,7 +63,7 @@ fn main() -> anyhow::Result<()> {
     {
         use crate::utils::print_metrics;
 
-        let metrics = Metrics::from(&bt);
+        let metrics = Metrics::from(&bts);
         print_metrics(&metrics, initial_balance);
     }
 
@@ -72,8 +75,8 @@ fn main() -> anyhow::Result<()> {
         let n = candles.len();
         println!("trades {n}");
 
-        let new_balance = bt.balance();
-        let t_balance = bt.total_balance();
+        let new_balance = bts.balance();
+        let t_balance = bts.total_balance();
         let new_balance_perf = initial_balance.change(new_balance);
         let t_balance_perf = initial_balance.change(t_balance);
         println!("performance {new_balance:.2}/{t_balance:.2} ({new_balance_perf:.2}%/{t_balance_perf:.2}%)");

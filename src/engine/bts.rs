@@ -607,10 +607,11 @@ fn scenario_with_aggregator() {
         let candle_one = candles.get(0);
         let candle_two = candles.get(1);
 
+        // candle_two is none at ic = 0
         assert!(candle_one.is_some());
-        assert!(candle_two.is_some());
 
         if ic > 0 {
+            assert!(candle_two.is_some());
             assert_ne!(candle_one, candle_two);
         }
 

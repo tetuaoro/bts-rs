@@ -31,14 +31,14 @@ use ta::{indicators::ExponentialMovingAverage, *};
 fn main() -> anyhow::Result<()> {
     let candles = utils::generate_sample_candles(3000, 42, 100.0);
     let initial_balance = 1_000.0;
-    let mut bt = Backtest::new(candles.clone(), initial_balance, None)?;
+    let mut bts = Backtest::new(candles.clone(), initial_balance, None)?;
 
     let mut total_balances = vec![];
     let mut errors = vec![];
 
     for period in 3..200 {
         let mut ema = ExponentialMovingAverage::new(period)?;
-        let result = bt.run(|bt, candle| {
+        let result = bts.run(|bt, candle| {
             let close = candle.close();
             let output = ema.next(close);
 
@@ -62,11 +62,11 @@ fn main() -> anyhow::Result<()> {
         });
 
         match result {
-            Ok(_) => total_balances.push((period, bt.total_balance())),
-            Err(_) => errors.push((period, bt.total_balance())),
+            Ok(_) => total_balances.push((period, bts.total_balance())),
+            Err(_) => errors.push((period, bts.total_balance())),
         }
 
-        bt.reset();
+        bts.reset();
     }
 
     total_balances.sort_by(|(_, a), (_, b)| if a < b { Ordering::Greater } else { Ordering::Less });

@@ -46,7 +46,7 @@ pub trait Aggregation {
     fn factors(&self) -> &[usize];
 
     /// Aggregates a set of candles into a single candle.
-    fn aggregate(&self, candles: &[&Candle]) -> Result<Candle> {
+    fn aggregate(&self, candles: &[Candle]) -> Result<Candle> {
         if candles.is_empty() {
             return Err(Error::CandleDataEmpty);
         }
@@ -77,7 +77,7 @@ pub trait Aggregation {
     }
 
     /// Determines if the current set of candles should be aggregated.
-    fn should_aggregate(&self, factor: usize, candles: &[&Candle]) -> bool {
+    fn should_aggregate(&self, factor: usize, candles: &[Candle]) -> bool {
         candles.len() == factor
     }
 }
@@ -442,28 +442,28 @@ impl Backtest {
             aggregated_candles_map.insert(factor, VecDeque::with_capacity(1));
         }
 
-        let data = self.data.clone(); //todo avoid clone
-        for candle in data.iter() {
+        while self.index < self.data.len() {
+            let candle = self.data.get(self.index).ok_or(Error::CandleNotFound)?.clone();
             for (_, deque) in current_candles.iter_mut() {
-                deque.push_back(candle);
+                deque.push_back(candle.clone());
             }
 
             for (factor, agg) in aggregated_candles_map.iter_mut() {
-                let deque = current_candles.get_mut(factor).expect("should contains candles");
+                let deque = current_candles.get_mut(factor).ok_or(Error::CandleDataEmpty)?;
                 let zero = deque.make_contiguous();
-                let candle = aggregator.aggregate(zero)?;
                 if aggregator.should_aggregate(*factor, zero) {
+                    let candle = aggregator.aggregate(zero)?;
+                    agg.pop_front();
                     deque.pop_front();
+                    agg.push_back(candle);
                 }
-                agg.pop_front();
-                agg.push_back(candle);
             }
 
             let agg_candles = aggregated_candles_map.values().flatten().collect::<Vec<_>>();
             func(self, agg_candles)?;
             self.execute_orders(&candle)?;
             self.execute_positions(&candle)?;
-            // self.index += 1; // unnecessary inc
+            self.index += 1;
         }
 
         Ok(())

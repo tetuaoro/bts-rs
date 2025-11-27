@@ -16,11 +16,11 @@ use ta::{
 fn main() -> anyhow::Result<()> {
     let candles = utils::generate_sample_candles(3000, 42, 100.0);
     let initial_balance = 1_000.0;
-    let mut bt = Backtest::new(candles.clone(), initial_balance, None)?;
+    let mut bts = Backtest::new(candles.clone(), initial_balance, None)?;
     let mut ema = ExponentialMovingAverage::new(100)?;
     let mut macd = MovingAverageConvergenceDivergence::default();
 
-    bt.run(|bt, candle| {
+    bts.run(|bt, candle| {
         let close = candle.close();
         let output = ema.next(close);
         let MovingAverageConvergenceDivergenceOutput { histogram, .. } = macd.next(close);
@@ -48,7 +48,7 @@ fn main() -> anyhow::Result<()> {
     {
         use crate::utils::print_metrics;
 
-        let metrics = Metrics::from(&bt);
+        let metrics = Metrics::from(&bts);
         print_metrics(&metrics, initial_balance);
     }
 
@@ -60,8 +60,8 @@ fn main() -> anyhow::Result<()> {
         let n = candles.len();
         println!("trades {n}");
 
-        let new_balance = bt.balance();
-        let t_balance = bt.total_balance();
+        let new_balance = bts.balance();
+        let t_balance = bts.total_balance();
         let new_balance_perf = initial_balance.change(new_balance);
         let t_balance_perf = initial_balance.change(t_balance);
         println!("performance {new_balance:.2}/{t_balance:.2} ({new_balance_perf:.2}%/{t_balance_perf:.2}%)");
