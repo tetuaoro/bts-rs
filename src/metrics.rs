@@ -87,8 +87,8 @@ pub struct Metrics {
 impl From<&Backtest> for Metrics {
     fn from(value: &Backtest) -> Self {
         Self {
-            events: value.events().cloned().collect::<Vec<_>>(),
             initial_balance: value.initial_balance(),
+            events: value.events().cloned().collect::<Vec<_>>(),
         }
     }
 }

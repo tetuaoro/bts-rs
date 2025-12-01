@@ -1,6 +1,6 @@
 [package]
 name = "bts"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2024"
 description = "Backtest your trading strategy."
 authors = ["tetuaoro <65575727+tetuaoro@users.noreply.github.com>"]
@@ -13,20 +13,22 @@ rand = "0.9.2"
 thiserror = "2.0.17"
 chrono = { version = "0.4.42" }
 
+rayon = { version = "1.11.0", optional = true }
+num_cpus = { version = "1.17.0", optional = true }
 serde = { version = "1.0.226", features = ["derive"], optional = true }
 
 # also update the doc feature below
 [features]
 metrics = []
+optimizer = ["rayon", "num_cpus"]
 serde = ["chrono/serde", "dep:serde"]
 
 [dev-dependencies]
 ta = "0.5.0"
 anyhow = "1.0.100"
-rayon = "1.11.0"
 
 [package.metadata.docs.rs]
-features = ["serde", "metrics"]
+features = ["serde", "metrics", "optimizer"]
 
 [[example]]
 name = "ts"
@@ -43,6 +45,7 @@ path = "examples/parameter_optimization.rs"
 [[example]]
 name = "par_popt"
 path = "examples/par_parameters_optimization.rs"
+required-features = ["optimizer"]
 
 [[example]]
 name = "aggts"

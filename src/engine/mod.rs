@@ -396,13 +396,13 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
-    pub fn run<F>(&mut self, mut func: F) -> Result<()>
+    pub fn run<F>(&mut self, mut strategy: F) -> Result<()>
     where
         F: FnMut(&mut Self, &Candle) -> Result<()>,
     {
         while self.index < self.data.len() {
             let candle = self.data.get(self.index).ok_or(Error::CandleNotFound)?.clone();
-            func(self, &candle)?;
+            strategy(self, &candle)?;
             self.execute_orders(&candle)?;
             self.execute_positions(&candle)?;
             self.index += 1;
@@ -421,7 +421,7 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
-    pub fn run_with_aggregator<A, F>(&mut self, aggregator: &A, mut func: F) -> Result<()>
+    pub fn run_with_aggregator<A, F>(&mut self, aggregator: &A, mut strategy: F) -> Result<()>
     where
         A: Aggregation,
         F: FnMut(&mut Self, Vec<&Candle>) -> Result<()>,
@@ -459,8 +459,8 @@ impl Backtest {
                 }
             }
 
-            let agg_candles = aggregated_candles_map.values().flatten().collect::<Vec<_>>();
-            func(self, agg_candles)?;
+            let agg_candles = aggregated_candles_map.values().flatten().collect();
+            strategy(self, agg_candles)?;
             self.execute_orders(&candle)?;
             self.execute_positions(&candle)?;
             self.index += 1;

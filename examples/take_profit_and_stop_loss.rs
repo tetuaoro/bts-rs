@@ -14,7 +14,7 @@ use ta::{
 };
 
 fn main() -> anyhow::Result<()> {
-    let candles = utils::generate_sample_candles(3000, 42, 100.0);
+    let candles = utils::example_candles();
     let initial_balance = 1_000.0;
     let mut bts = Backtest::new(candles.clone(), initial_balance, None)?;
     let mut ema = ExponentialMovingAverage::new(100)?;

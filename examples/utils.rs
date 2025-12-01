@@ -1,68 +1,7 @@
-#![allow(dead_code)]
-
-use std::cmp::Ordering;
-use std::io::Write;
-use std::sync::Mutex;
-
 use bts::engine::{Candle, CandleBuilder};
 #[cfg(feature = "metrics")]
 use bts::metrics::Metrics;
 use chrono::{DateTime, Duration};
-
-pub const CAPACITY: usize = 5;
-
-pub struct SharedResults<T> {
-    total_balances: Mutex<Vec<T>>,
-    errors: Mutex<Vec<T>>,
-    current_iter: Mutex<usize>,
-    total_iterations: usize,
-}
-
-impl<T: PartialOrd> SharedResults<T> {
-    pub fn new(total: usize) -> Self {
-        Self {
-            total_balances: Mutex::new(Vec::<T>::with_capacity(CAPACITY)),
-            errors: Mutex::new(Vec::<T>::with_capacity(CAPACITY)),
-            current_iter: Mutex::new(0),
-            total_iterations: total,
-        }
-    }
-
-    pub fn total_balances(&self) -> &Mutex<Vec<T>> {
-        &self.total_balances
-    }
-
-    pub fn errors(&self) -> &Mutex<Vec<T>> {
-        &self.errors
-    }
-
-    pub fn push_result(&self, item: T, is_error: bool) {
-        let mut guard = if is_error {
-            self.errors.lock().unwrap()
-        } else {
-            self.total_balances.lock().unwrap()
-        };
-
-        guard.push(item);
-        guard.sort_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
-        if guard.len() > CAPACITY {
-            guard.truncate(CAPACITY);
-        }
-    }
-
-    pub fn increment_iter(&self) -> usize {
-        let mut iter = self.current_iter.lock().unwrap();
-        *iter += 1;
-        *iter
-    }
-
-    pub fn print_progress(&self) {
-        let iter = *self.current_iter.lock().unwrap();
-        let progress = (iter as f64 / self.total_iterations as f64) * 100.0;
-        print!("\rProgress: {progress:.2}% ({iter}/{})", self.total_iterations);
-        std::io::stdout().flush().unwrap();
-    }
-}
 
 /// Generates deterministic candle data.
 pub fn generate_sample_candles(max: i32, seed: i32, base_price: f64) -> Vec<Candle> {
@@ -109,6 +48,10 @@ pub fn generate_sample_candles(max: i32, seed: i32, base_price: f64) -> Vec<Cand
         .collect()
 }
 
+pub fn example_candles() -> Vec<Candle> {
+    generate_sample_candles(3000, 42, 100.0)
+}
+
 /// Pretty print Metrics
 #[cfg(feature = "metrics")]
 pub fn print_metrics(metrics: &Metrics, initial_balance: f64) {
@@ -130,4 +73,5 @@ macro_rules! pause {
     };
 }
 
+#[allow(dead_code)]
 fn main() {}

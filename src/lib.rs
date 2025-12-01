@@ -187,6 +187,10 @@ mod utils;
 #[cfg(feature = "metrics")]
 pub mod metrics;
 
+/// Strategy parameter optimization.
+#[cfg(feature = "optimizer")]
+pub mod optimizer;
+
 /// Re-exports of commonly used types and traits for convenience.
 pub mod prelude {
     pub use super::*;
@@ -195,6 +199,9 @@ pub mod prelude {
 
     #[cfg(feature = "metrics")]
     pub use crate::metrics::*;
+
+    #[cfg(feature = "optimizer")]
+    pub use crate::optimizer::*;
 }
 
 use std::ops::{Add, Div, Mul, Sub};
