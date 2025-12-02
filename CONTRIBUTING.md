@@ -24,7 +24,7 @@ Open an **issue** with:
 
 1. **Fork** and clone the repo:
 ```bash
-git clone https://github.com/yourusername/bts.git
+git clone https://github.com/raonagos/bts.git
 cd bts
 ```
 

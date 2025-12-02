@@ -1,12 +1,24 @@
 [package]
-name = "bts"
+name = "bts-rs"
 version = "0.7.0"
 edition = "2024"
 description = "Backtest your trading strategy."
 authors = ["tetuaoro <65575727+tetuaoro@users.noreply.github.com>"]
-documentation = "https://docs.rs/crate/bts/latest"
-repository = "https://github.com/raonagos/bts"
+documentation = "https://docs.rs/bts-rs"
+repository = "https://github.com/raonagos/bts-rs"
 license = "MIT"
+readme = "README.md"
+keywords = [
+    "trading",
+    "finance",
+    "backtest",
+    "indicators",
+    "technical-analysis",
+]
+categories = ["finance", "science", "algorithms"]
+
+[lib]
+name = "bts"
 
 [dependencies]
 rand = "0.9.2"
