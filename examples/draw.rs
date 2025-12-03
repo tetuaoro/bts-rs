@@ -1,4 +1,4 @@
-//! # Turtle Trading Strategy with Trailing Stop and Multi-Timeframe Analysis
+//! # Turtle Trading Strategy with Take profit and Stop loss
 //!
 //! This example implements a simplified version of the famous **Turtle Trading Strategy**
 //! developed by Richard Dennis, which uses trend-following techniques with strict risk management.
@@ -20,24 +20,8 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut ema = ExponentialMovingAverage::new(100)?;
     let mut macd = MovingAverageConvergenceDivergence::default();
 
-    struct TimeframeAggregator;
-
-    impl Aggregation for TimeframeAggregator {
-        fn factors(&self) -> &[usize] {
-            &[1, 4, 8]
-        }
-    }
-
-    let aggregator = TimeframeAggregator;
-    bts.run_with_aggregator(&aggregator, |bt, candles| {
-        let candle_one = candles.get(0).ok_or(Error::CandleNotFound)?;
-        let _candle_four = candles.get(1);
-        let _candle_eight = candles.get(2);
-
-        if let Some(_c) = _candle_four {}
-        if let Some(_c) = _candle_eight {}
-
-        let close = candle_one.close();
+    bts.run(|bt, candle| {
+        let close = candle.close();
         let output = ema.next(close);
         let MovingAverageConvergenceDivergenceOutput { histogram, .. } = macd.next(close);
 
@@ -49,7 +33,8 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             let quantity = amount / close;
             let order = (
                 OrderType::Market(close),
-                OrderType::TrailingStop(close, 2.0),
+                // 1/3 RR
+                OrderType::TakeProfitAndStopLoss(close.addpercent(6.0), close.subpercent(2.0)),
                 quantity,
                 OrderSide::Buy,
             );
@@ -84,6 +69,21 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let buy_and_hold = (initial_balance / first_price) * last_price;
         let buy_and_hold_perf = first_price.change(last_price);
         println!("buy and hold {buy_and_hold:.2} ({buy_and_hold_perf:.2}%)");
+    }
+
+    let candles = bts.candles().take(200).collect::<Vec<_>>();
+
+    println!("{candles:#?}");
+    
+    #[cfg(feature = "draws")]
+    {
+        let options = DrawOptions::default()
+            .title("Je cherche")
+            .size(1200, 900)
+            .show_volume(true);
+
+        let draw = Draw::with_backtest(&bts).with_options(options);
+        draw.save_to_file("ici.html")?;
     }
 
     Ok(())

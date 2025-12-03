@@ -1,11 +1,12 @@
-use bts::engine::{Candle, CandleBuilder};
+use bts_rs::engine::{Candle, CandleBuilder};
 #[cfg(feature = "metrics")]
-use bts::metrics::Metrics;
+use bts_rs::metrics::Metrics;
 use chrono::{DateTime, Duration};
 
 /// Generates deterministic candle data.
 pub fn generate_sample_candles(max: i32, seed: i32, base_price: f64) -> Vec<Candle> {
     let mut open_time = DateTime::default();
+    let mut open = base_price;
 
     (0..=max)
         .map(|i| {
@@ -17,7 +18,6 @@ pub fn generate_sample_candles(max: i32, seed: i32, base_price: f64) -> Vec<Cand
 
             // Calculate OHLC prices
             let close = base_price + variation;
-            let open = if i == 0 { close - 1.0 } else { close - 0.5 * variation };
             let high = close + 0.3 * variation.abs();
             let low = close - 0.3 * variation.abs();
             // Ensure valid price order: open ≤ low ≤ high ≤ close
@@ -43,6 +43,7 @@ pub fn generate_sample_candles(max: i32, seed: i32, base_price: f64) -> Vec<Cand
                 .unwrap();
 
             open_time = close_time + Duration::microseconds(1);
+            open = close;
             candle
         })
         .collect()
@@ -54,6 +55,7 @@ pub fn example_candles() -> Vec<Candle> {
 
 /// Pretty print Metrics
 #[cfg(feature = "metrics")]
+#[allow(dead_code)]
 pub fn print_metrics(metrics: &Metrics, initial_balance: f64) {
     println!("=== Backtest Metrics ===");
     println!("Initial Balance: {:.2}", initial_balance);

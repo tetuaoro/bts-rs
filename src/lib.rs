@@ -5,7 +5,7 @@
 //!
 //! ## Why BTS?
 //! - **Optimized for Performance**: Uses O(1) operations on orders/positions, and parallel processing for optimization tasks.
-//! - **Technical Analysis Ready**: Seamlessly integrates with the [`ta`](https://crates.io/crates/ta) crate for 100+ indicators (EMA, MACD, RSI, etc.).
+//! - **Technical Analysis Ready**: Seamlessly integrates with popular indicators crates for 100+ indicators (EMA, MACD, RSI, etc.).
 //! - **Risk Management**: Supports stop-loss, take-profit, and trailing stops with configurable rules.
 //! - **Realistic Simulations**: Models slippage, fees, and latency for accurate backtesting.
 //! - **Extensible**: Add custom indicators, strategies, or data sources with minimal effort.
@@ -23,7 +23,7 @@
 //!
 //! ## Features
 //! ### 1. **Technical Indicators**
-//! - Compatible with the [`ta`](https://crates.io/crates/ta) crate for 100+ additional indicators.
+//! - Compatible with indicators crates like the [`ta`](https://crates.io/crates/ta) crate for 100+ additional indicators.
 //!
 //! ### 2. **Order Types & Exit Rules**
 //! | Order Type               | Description                                                                                     |
@@ -51,13 +51,13 @@
 //! ### 1. Add BTS to your project:
 //! ```toml
 //! [dependencies]
-//! bts = "*"
+//! bts_rs = "*"
 //! ta = "*"  # Optional: For technical analysis indicators
 //! ```
 //!
 //! ### 2. Run a Simple Backtest:
 //! ```rust
-//! use bts::prelude::*;
+//! use bts_rs::prelude::*;
 //! use chrono::DateTime;
 //!
 //! fn main() {
@@ -120,10 +120,9 @@
 //! ## Integrations
 //! | Crate          | Purpose                                                                                     |
 //! |----------------|---------------------------------------------------------------------------------------------|
-//! | [`ta`](https://crates.io/crates/ta) | Technical analysis indicators (EMA, RSI, MACD, etc.).                                      |
 //! | [`rayon`](https://crates.io/crates/rayon) | Parallel processing for optimization.                                                     |
 //! | [`serde`](https://crates.io/crates/serde) | Serialize/deserialize backtest results.                                                    |
-//! | [`plotters`](https://crates.io/crates/plotters) | Visualize equity curves and indicators.                                                   |
+//! | [`plotters`](https://crates.io/crates/plotters) | Visualize market candlesticks data, equity curves and indicators.                                                   |
 //!
 //! ## Error Handling
 //! BTS uses custom error types to handle:
@@ -133,7 +132,7 @@
 //!
 //! Example:
 //! ```rust
-//! use bts::prelude::*;
+//! use bts_rs::prelude::*;
 //! use chrono::DateTime;
 //!
 //! fn main() {
@@ -167,7 +166,7 @@
 //! ```
 //!
 //! ## Contributing
-//! Contributions are welcome! See [`CONTRIBUTING.md`](https://github.com/raonagos/bts/blob/main/CONTRIBUTING.md).
+//! Contributions are welcome! See [`CONTRIBUTING.md`](https://github.com/raonagos/bts-rs/blob/master/CONTRIBUTING.md).
 //!
 //! ## License
 //! MIT
@@ -190,6 +189,10 @@ pub mod metrics;
 #[cfg(feature = "optimizer")]
 pub mod optimizer;
 
+/// Draw graphics with a lot of backends: png, svg, html, etc.
+#[cfg(feature = "draws")]
+pub mod draws;
+
 /// Re-exports of commonly used types and traits for convenience.
 pub mod prelude {
     pub use super::*;
@@ -201,6 +204,9 @@ pub mod prelude {
 
     #[cfg(feature = "optimizer")]
     pub use crate::optimizer::*;
+
+    #[cfg(feature = "draws")]
+    pub use crate::draws::*;
 }
 
 use std::ops::{Add, Div, Mul, Sub};

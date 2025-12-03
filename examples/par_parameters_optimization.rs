@@ -5,7 +5,7 @@
 
 mod utils;
 
-use bts::prelude::*;
+use bts_rs::prelude::*;
 use ta::{indicators::*, *};
 
 const START: usize = 8;
@@ -30,7 +30,7 @@ impl ParameterCombination for Parameters {
     }
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let candles = utils::example_candles();
     let initial_balance = 1_000.0;
     let opt = Optimizer::<Parameters>::new(candles.clone(), initial_balance, None);

@@ -51,8 +51,8 @@ pub trait Aggregation {
             return Err(Error::CandleDataEmpty);
         }
 
-        let first_candle = candles.first().unwrap();
-        let last_candle = candles.last().unwrap();
+        let first_candle = candles.first().ok_or(Error::CandleNotFound)?;
+        let last_candle = candles.last().ok_or(Error::CandleNotFound)?;
 
         let open = first_candle.open();
         let close = last_candle.close();
@@ -143,6 +143,11 @@ impl Backtest {
             positions: VecDeque::new(),
             wallet: Wallet::new(initial_balance)?,
         })
+    }
+
+    /// Returns an iterator over the data.
+    pub fn candles(&self) -> std::slice::Iter<'_, Candle> {
+        self.data.iter()
     }
 
     /// Returns an iterator over the pending orders.
@@ -393,7 +398,7 @@ impl Backtest {
     /// Runs the backtest, executing the provided function for each candle.
     ///
     /// ### Arguments
-    /// * `func` - A closure that takes the backtest and current candle.
+    /// * `strategy` - A closure that takes the backtest and current candle.
     ///
     /// ### Returns
     /// Ok if successful, or an error.
@@ -417,7 +422,7 @@ impl Backtest {
     ///
     /// ### Arguments
     /// * `aggregator` - An aggregator that defines how to group candles (e.g., by timeframe).
-    /// * `func` - A closure that takes the backtest and a vector of candle references.
+    /// * `strategy` - A closure that takes the backtest and a vector of candle references.
     ///            The vector contains the current candle followed by any aggregated candles.
     ///
     /// ### Returns

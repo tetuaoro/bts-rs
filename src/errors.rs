@@ -122,6 +122,22 @@ pub enum Error {
     #[error("{0}")]
     Io(#[from] std::io::Error),
 
+    /// A formatter error occured.
+    ///
+    /// ### Arguments
+    /// * `0` - The underlying formatter error.
+    #[cfg(feature = "draws")]
+    #[error("{0}")]
+    Fmt(#[from] std::fmt::Error),
+
+    /// An error with serde json crate.
+    ///
+    /// ### Arguments
+    /// * `0` - The underlying serde_json error.
+    #[cfg(feature = "draws")]
+    #[error("{0}")]
+    SerdeJson(#[from] serde_json::Error),
+
     /// A mutex was poisoned.
     #[error("{0}")]
     MutexPoisoned(String),

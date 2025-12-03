@@ -6,13 +6,11 @@
 
  ## **Key Features**
 
- - **Technical Indicators**: Uses with popular indicators (Impulse MACD, Parabolic SAR, VWAP, etc.)
-   and allows easy addition of new ones.
+ - **Technical Indicators**: Uses with popular indicators (Impulse MACD, Parabolic SAR, VWAP, etc.) and allows easy addition of new ones.
  - **Backtesting**: Simulates trading strategies on historical or generated data.
  - **Market Engine**: Processes candles one by one to test strategies under realistic conditions.
  - **Performance Metrics**: Calculates P&L (Profit & Loss), drawdown, Sharpe ratio, and more.
- - **Flexibility**: Compatible with the [`ta`](https://crates.io/crates/ta) crate for seamless
-   integration with other indicators.
+ - **Flexibility**: Compatible with indicators crates for seamless integration.
  - **Order & Position Management**: Supports market orders, limit orders, take-profit,
    stop-loss, and trailing stops.
 
@@ -36,7 +34,7 @@
  ## **Usage Example**
 
  ```rust
- use bts::prelude::*;
+ use bts_rs::prelude::*;
 
  // Candlestick data
  let data = vec![
@@ -73,8 +71,7 @@
 
  ## **Integration with Other Crates**
 
- BTS is compatible with the [`ta`](https://crates.io/crates/ta) crate for technical analysis,
- allowing you to easily integrate additional indicators.
+ BTS is compatible with popular indicators crates for technical analysis, allowing you to easily integrate your trading strategy.
 
  ## **Advanced Features**
 
@@ -98,13 +95,13 @@
 
  ```toml
  [dependencies]
- bts = "0.7"
+ bts_rs = "0.8"
  ```
 
  Then import and use it in your project:
 
  ```rust
- use bts::prelude::*;
+ use bts_rs::prelude::*;
  ```
 
  ## Contributing

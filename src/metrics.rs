@@ -79,6 +79,7 @@ impl From<&Wallet> for Event {
 /// `Metrics` is used to compute and display key performance indicators (KPIs)
 /// for a trading strategy, such as max drawdown, profit factor, Sharpe ratio, and win rate.
 /// It is typically constructed from a `Backtest` or a list of `Event`s.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug)]
 pub struct Metrics {
     events: Vec<Event>,
@@ -89,7 +90,7 @@ impl From<&Backtest> for Metrics {
     fn from(value: &Backtest) -> Self {
         Self {
             initial_balance: value.initial_balance(),
-            events: value.events().cloned().collect::<Vec<_>>(),
+            events: value.events().cloned().collect(),
         }
     }
 }

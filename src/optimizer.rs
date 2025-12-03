@@ -18,7 +18,7 @@ use rayon::prelude::*;
 /// The associated type `P` represents a single parameter combination (e.g., a tuple of values).
 pub trait ParameterCombination {
     /// Type representing a single parameter combination (e.g., `(usize, f64)`).
-    type T: Clone + Sync;
+    type T: Clone + Send + Sync;
 
     /// Generates all possible parameter combinations to test.
     ///
@@ -73,7 +73,6 @@ impl<PS: ParameterCombination> Optimizer<PS> {
     where
         T: Clone,
         PS: Sync,
-        PS::T: Send,
         TR: Fn(&PS::T) -> Result<T> + Sync,
         S: FnMut(&mut Backtest, &mut T, &Candle) -> Result<()> + Send,
     {
