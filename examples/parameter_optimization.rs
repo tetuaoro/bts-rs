@@ -25,10 +25,10 @@ mod utils;
 
 use std::cmp::Ordering;
 
-use bts::prelude::*;
-use ta::{indicators::ExponentialMovingAverage, *};
+use bts_rs::prelude::*;
+use ta::{indicators::*, *};
 
-fn main() -> anyhow::Result<()> {
+fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let candles = utils::example_candles();
     let initial_balance = 1_000.0;
     let mut bts = Backtest::new(candles.clone(), initial_balance, None)?;
@@ -55,7 +55,7 @@ fn main() -> anyhow::Result<()> {
                     quantity,
                     OrderSide::Buy,
                 );
-                bt.place_order(order.into())?;
+                bt.place_order(candle, order.into())?;
             }
 
             Ok(())

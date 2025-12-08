@@ -51,8 +51,8 @@ pub trait Aggregation {
             return Err(Error::CandleDataEmpty);
         }
 
-        let first_candle = candles.first().unwrap();
-        let last_candle = candles.last().unwrap();
+        let first_candle = candles.first().ok_or(Error::CandleNotFound)?;
+        let last_candle = candles.last().ok_or(Error::CandleNotFound)?;
 
         let open = first_candle.open();
         let close = last_candle.close();
@@ -84,7 +84,6 @@ pub trait Aggregation {
 
 /// Backtesting engine for trading strategies.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug)]
 pub struct Backtest {
     index: usize,
     wallet: Wallet,
@@ -127,10 +126,10 @@ impl Backtest {
             return Err(Error::CandleDataEmpty);
         }
 
-        if let Some((market_fee, limit_fee)) = market_fees {
-            if market_fee <= 0.0 || limit_fee <= 0.0 {
-                return Err(Error::NegZeroFees);
-            }
+        if let Some((market_fee, limit_fee)) = market_fees
+            && (market_fee <= 0.0 || limit_fee <= 0.0)
+        {
+            return Err(Error::NegZeroFees);
         }
 
         Ok(Self {
@@ -143,6 +142,21 @@ impl Backtest {
             positions: VecDeque::new(),
             wallet: Wallet::new(initial_balance)?,
         })
+    }
+
+    /// Returns the market fees.
+    pub fn market_fees(&self) -> Option<&(f64, f64)> {
+        self.market_fees.as_ref()
+    }
+
+    /// Returns an iterator over the data.
+    pub fn candles(&self) -> std::slice::Iter<'_, Candle> {
+        self.data.iter()
+    }
+
+    /// Returns the current candle.
+    pub fn current_candle(&self) -> Result<&Candle> {
+        self.data.get(self.index).ok_or(Error::CandleNotFound)
     }
 
     /// Returns an iterator over the pending orders.
@@ -168,13 +182,15 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
-    pub fn place_order(&mut self, order: Order) -> Result<()> {
+    #[allow(unused_variables)]
+    pub fn place_order(&mut self, candle: &Candle, order: Order) -> Result<()> {
         self.wallet.lock(order.cost()?)?;
         self.orders.push_back(order.clone());
         #[cfg(feature = "metrics")]
         {
-            self.events.push(Event::from(&self.wallet));
-            self.events.push(Event::AddOrder(order));
+            let open_time = candle.open_time();
+            self.events.push(Event::from((open_time, &self.wallet)));
+            self.events.push(Event::AddOrder(open_time, order));
         }
         Ok(())
     }
@@ -186,7 +202,8 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
-    pub fn delete_order(&mut self, order: &Order, force_remove: bool) -> Result<()> {
+    #[allow(unused_variables)]
+    pub fn delete_order(&mut self, candle: &Candle, order: &Order, force_remove: bool) -> Result<()> {
         if force_remove {
             let order_idx = self
                 .orders
@@ -198,14 +215,16 @@ impl Backtest {
         self.wallet.unlock(order.cost()?)?;
         #[cfg(feature = "metrics")]
         {
-            self.events.push(Event::from(&self.wallet));
-            self.events.push(Event::DelOrder(order.clone()));
+            let open_time = candle.open_time();
+            self.events.push(Event::from((open_time, &self.wallet)));
+            self.events.push(Event::DelOrder(open_time, order.clone()));
         }
         Ok(())
     }
 
     /// Opens a new position.
-    fn open_position(&mut self, position: Position) -> Result<()> {
+    #[allow(unused_variables)]
+    fn open_position(&mut self, candle: &Candle, position: Position) -> Result<()> {
         self.wallet.sub(position.cost()?)?;
         if let Some((market_fee, limit_fee)) = self.market_fees {
             if position.is_market_type() {
@@ -217,8 +236,9 @@ impl Backtest {
         self.positions.push_back(position.clone());
         #[cfg(feature = "metrics")]
         {
-            self.events.push(Event::from(&self.wallet));
-            self.events.push(Event::AddPosition(position));
+            let open_time = candle.open_time();
+            self.events.push(Event::from((open_time, &self.wallet)));
+            self.events.push(Event::AddPosition(open_time, position));
         }
         Ok(())
     }
@@ -232,7 +252,14 @@ impl Backtest {
     ///
     /// ### Returns
     /// The profit/loss from closing the position, or an error.
-    pub fn close_position(&mut self, position: &Position, exit_price: f64, force_remove: bool) -> Result<f64> {
+    #[allow(unused_variables)]
+    pub fn close_position(
+        &mut self,
+        candle: &Candle,
+        position: &Position,
+        exit_price: f64,
+        force_remove: bool,
+    ) -> Result<f64> {
         if exit_price <= 0.0 || !exit_price.is_finite() {
             return Err(Error::ExitPrice(exit_price));
         }
@@ -260,8 +287,9 @@ impl Backtest {
         {
             let mut position = position.clone();
             position.set_exit_price(exit_price)?;
-            self.events.push(Event::from(&self.wallet));
-            self.events.push(Event::DelPosition(position));
+            let open_time = candle.open_time();
+            self.events.push(Event::from((open_time, &self.wallet)));
+            self.events.push(Event::DelPosition(open_time, position));
         }
         Ok(pnl)
     }
@@ -273,9 +301,9 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
-    pub fn close_all_positions(&mut self, exit_price: f64) -> Result<()> {
+    pub fn close_all_positions(&mut self, candle: &Candle, exit_price: f64) -> Result<()> {
         while let Some(position) = self.positions.pop_front() {
-            self.close_position(&position, exit_price, false)?;
+            self.close_position(candle, &position, exit_price, false)?;
         }
         Ok(())
     }
@@ -286,11 +314,11 @@ impl Backtest {
         while let Some(order) = self.orders.pop_front() {
             let price = order.entry_price()?;
             if price >= candle.low() && price <= candle.high() {
-                self.open_position(Position::from(order))?;
+                self.open_position(candle, Position::from(order))?;
             } else {
                 //? if order is market type and does not between `high` and `low`, delete
                 if order.is_market_type() {
-                    self.delete_order(&order, false)?;
+                    self.delete_order(candle, &order, false)?;
                 } else {
                     orders.push_back(order);
                 }
@@ -370,7 +398,7 @@ impl Backtest {
 
             match should_close {
                 Some(exit_price) => {
-                    self.close_position(&position, exit_price, false)?;
+                    self.close_position(candle, &position, exit_price, false)?;
                 }
                 None => positions.push_back(position),
             }
@@ -393,7 +421,7 @@ impl Backtest {
     /// Runs the backtest, executing the provided function for each candle.
     ///
     /// ### Arguments
-    /// * `func` - A closure that takes the backtest and current candle.
+    /// * `strategy` - A closure that takes the backtest and current candle.
     ///
     /// ### Returns
     /// Ok if successful, or an error.
@@ -402,7 +430,7 @@ impl Backtest {
         S: FnMut(&mut Self, &Candle) -> Result<()>,
     {
         while self.index < self.data.len() {
-            let candle = self.data.get(self.index).ok_or(Error::CandleNotFound)?.clone();
+            let candle = self.current_candle()?.clone();
             strategy(self, &candle)?;
             self.execute_orders(&candle)?;
             self.execute_positions(&candle)?;
@@ -417,8 +445,9 @@ impl Backtest {
     ///
     /// ### Arguments
     /// * `aggregator` - An aggregator that defines how to group candles (e.g., by timeframe).
-    /// * `func` - A closure that takes the backtest and a vector of candle references.
-    ///            The vector contains the current candle followed by any aggregated candles.
+    /// * `strategy` - A closure that takes the backtest and a vector of candle references.
+    ///
+    /// The vector contains the current candle followed by any aggregated candles.
     ///
     /// ### Returns
     /// Ok if successful, or an error.
@@ -444,7 +473,7 @@ impl Backtest {
         }
 
         while self.index < self.data.len() {
-            let candle = self.data.get(self.index).ok_or(Error::CandleNotFound)?.clone();
+            let candle = self.current_candle()?.clone();
             for (_, deque) in current_candles.iter_mut() {
                 deque.push_back(candle.clone());
             }

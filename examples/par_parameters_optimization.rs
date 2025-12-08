@@ -5,7 +5,7 @@
 
 mod utils;
 
-use bts::prelude::*;
+use bts_rs::prelude::*;
 use ta::{indicators::*, *};
 
 const START: usize = 8;
@@ -15,9 +15,9 @@ const END: usize = 13;
 struct Parameters;
 
 impl ParameterCombination for Parameters {
-    type T = (usize, usize, usize, usize);
+    type Output = (usize, usize, usize, usize);
 
-    fn generate() -> Vec<Self::T> {
+    fn generate() -> Vec<Self::Output> {
         let min = START;
         let max = END;
         (min..=max)
@@ -30,7 +30,7 @@ impl ParameterCombination for Parameters {
     }
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let candles = utils::example_candles();
     let initial_balance = 1_000.0;
     let opt = Optimizer::<Parameters>::new(candles.clone(), initial_balance, None);
@@ -57,7 +57,7 @@ fn main() -> anyhow::Result<()> {
                     quantity,
                     OrderSide::Buy,
                 );
-                bt.place_order(order.into())?;
+                bt.place_order(candle, order.into())?;
             }
             Ok(())
         },

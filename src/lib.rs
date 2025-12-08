@@ -4,103 +4,103 @@
 //! It is designed for **speed, flexibility, and accuracy**, making it ideal for both **retail traders** and **algorithmic trading developers**.
 //!
 //! ## Why BTS?
+//! 
 //! - **Optimized for Performance**: Uses O(1) operations on orders/positions, and parallel processing for optimization tasks.
-//! - **Technical Analysis Ready**: Seamlessly integrates with the [`ta`](https://crates.io/crates/ta) crate for 100+ indicators (EMA, MACD, RSI, etc.).
+//! - **Technical Analysis Ready**: Seamlessly integrates with popular indicators crates for 100+ indicators (EMA, MACD, RSI, etc.).
 //! - **Risk Management**: Supports stop-loss, take-profit, and trailing stops with configurable rules.
 //! - **Realistic Simulations**: Models slippage, fees, and latency for accurate backtesting.
 //! - **Extensible**: Add custom indicators, strategies, or data sources with minimal effort.
 //!
 //! ## Core Components
-//! | Component   | Description                                                                                     |
-//! |-------------|-------------------------------------------------------------------------------------------------|
-//! | **`Candle`** | Represents OHLCV (Open, High, Low, Close, Volume) data for a single time period.               |
-//! | **`Order`**  | Market, limit, or conditional orders (e.g., stop-loss, take-profit).                          |
-//! | **`Position`** | Open trades with configurable exit rules (e.g., trailing stops).                              |
-//! | **`Wallet`** | Tracks balance, locked funds, unrealized P&L, and fees.                                       |
-//! | **`Metrics`** | Calculates performance metrics: P&L, drawdown, Sharpe ratio, win rate, and more.             |
-//! | **`Optimizer`** | Calculates bests parameters *(indicators, RR, etc...)*.             |
-//! | **`Backtest`** | The engine that simulates strategy execution over historical data.                          |
+//! 
+//! | Component       | Description                                                                      |
+//! |---------------- |----------------------------------------------------------------------------------|
+//! | **`Metrics`**   | Calculates performance metrics: P&L, drawdown, Sharpe ratio, win rate, and more. |
+//! | **`Optimizer`** | Calculates bests parameters *(indicators, RR, etc...)*.                          |
+//! | **`Draw`**      | Draw candlestick data, balance and metrics to a *SVG* or *PNG* file.             |
+//! | **`Backtest`**  | The engine that simulates strategy execution over historical data.               |
 //!
 //! ## Features
+//! 
 //! ### 1. **Technical Indicators**
-//! - Compatible with the [`ta`](https://crates.io/crates/ta) crate for 100+ additional indicators.
+//! - Compatible with indicators crates like the [`ta`](https://crates.io/crates/ta) crate for 100+ additional indicators.
 //!
 //! ### 2. **Order Types & Exit Rules**
-//! | Order Type               | Description                                                                                     |
-//! |--------------------------|-------------------------------------------------------------------------------------------------|
-//! | **Market Order**         | Executes immediately at the current price.                                                    |
-//! | **Limit Order**          | Executes only at a specified price or better.                                                 |
-//! | **Take-Profit**          | Closes the position when a target price is reached.                                          |
-//! | **Stop-Loss**            | Closes the position to limit losses.                                                          |
-//! | **Trailing Stop**        | Dynamically adjusts the stop price based on market movements.                                |
-//! | **Take-Profit + Stop-Loss** | Combines both rules for risk management.                                                   |
+//! 
+//! | Order Type                  | Description                                                   |
+//! |-----------------------------|---------------------------------------------------------------|
+//! | **Market Order**            | Executes immediately at the current price.                    |
+//! | **Limit Order**             | Executes only at a specified price or better.                 |
+//! | **Take-Profit**             | Closes the position when a target price is reached.           |
+//! | **Stop-Loss**               | Closes the position to limit losses.                          |
+//! | **Trailing Stop**           | Dynamically adjusts the stop price based on market movements. |
+//! | **Take-Profit + Stop-Loss** | Combines both rules for risk management.                      |
 //!
 //! ### 3. **Performance Metrics**
-//! | Metric               | Description                                                                                     |
-//! |----------------------|-------------------------------------------------------------------------------------------------|
-//! | **Max Drawdown**     | Largest peak-to-trough decline in account balance (%).                                        |
-//! | **Profit Factor**    | Ratio of gross profits to gross losses.                                                       |
-//! | **Sharpe Ratio**     | Risk-adjusted return (higher = better).                                                      |
-//! | **Win Rate**         | Percentage of winning trades.                                                                 |
-//! | **Sortino Ratio**    | Like Sharpe ratio, but focuses only on downside volatility.                                  |
+//! 
+//! | Metric               | Description                                            |
+//! |----------------------|--------------------------------------------------------|
+//! | **Max Drawdown**     | Largest peak-to-trough decline in account balance (%). |
+//! | **Profit Factor**    | Ratio of gross profits to gross losses.                |
+//! | **Sharpe Ratio**     | Risk-adjusted return (higher = better).                |
+//! | **Win Rate**         | Percentage of winning trades.                          |
 //!
 //! ### 4. **Optimization Tools**
+//! 
 //! - **Parallel Brute-Force**: Optimize strategy parameters (e.g., EMA periods) using multi-threading.
 //!
 //! ## Getting Started
+//! 
 //! ### 1. Add BTS to your project:
 //! ```toml
 //! [dependencies]
-//! bts = "*"
+//! bts_rs = "*"
 //! ta = "*"  # Optional: For technical analysis indicators
 //! ```
 //!
 //! ### 2. Run a Simple Backtest:
 //! ```rust
-//! use bts::prelude::*;
-//! use chrono::DateTime;
+//! use bts_rs::prelude::*;
+//! use chrono::{DateTime, Duration};
 //!
-//! fn main() {
-//!     let candle = CandleBuilder::builder()
-//!         .open(100.0)
-//!         .high(110.0)
-//!         .low(95.0)
-//!         .close(105.0)
-//!         .volume(1.0)
-//!         .bid(0.5)
-//!         .open_time(DateTime::default())
-//!         .close_time(DateTime::default())
-//!         .build()
-//!         .unwrap();
-//!
-//!     // Initialize backtest with \$10,000
-//!     let mut backtest = Backtest::new(vec![candle], 10_000.0, None).unwrap();
-//!
-//!     // Execute a market buy order
-//!     backtest
-//!         .run(|bt, _candle| {
-//!             let order: Order = (OrderType::Market(102.0), 1.0, OrderSide::Buy).into();
-//!             bt.place_order(order).unwrap();
-//!
-//!             // Close the position at \$104.0
-//!             if let Some(position) = bt.positions().last().cloned() {
-//!                 bt.close_position(&position, 104.0, true).unwrap();
-//!             }
-//!
-//!             Ok(())
-//!         })
-//!         .unwrap();
-//!
-//!     // Print performance metrics
-//!     #[cfg(feature = "metrics")]
-//!     {
-//!         let metrics = Metrics::from(&backtest);
-//!         println!("{}", metrics);
-//!     }
+//! let candle = CandleBuilder::builder()
+//!     .open(100.0)
+//!     .high(110.0)
+//!     .low(95.0)
+//!     .close(105.0)
+//!     .volume(1.0)
+//!     .bid(0.5)
+//!     .open_time(DateTime::default())
+//!     .close_time(DateTime::default() + Duration::days(1))
+//!     .build()
+//!     .unwrap();
+//! 
+//! // Initialize backtest with \$10,000
+//! let mut backtest = Backtest::new(vec![candle], 10_000.0, None).unwrap();
+//! 
+//! // Execute a market buy order
+//! backtest
+//!     .run(|bt, candle| {
+//!         let order: Order = (OrderType::Market(102.0), 1.0, OrderSide::Buy).into();
+//!         bt.place_order(candle, order).unwrap();
+//!         // Close the position at \$104.0
+//!         if let Some(position) = bt.positions().last().cloned() {
+//!             bt.close_position(candle, &position, 104.0, true).unwrap();
+//!         }
+//!         Ok(())
+//!     })
+//!     .unwrap();
+//! 
+//! // Print performance metrics
+//! #[cfg(feature = "metrics")]
+//! {
+//!     let metrics = Metrics::from(&backtest);
+//!     println!("{}", metrics);
 //! }
 //! ```
 //!
 //! ### Output:
+//! 
 //! ```bash
 //! === Backtest Metrics ===
 //! Initial Balance: 10000.00
@@ -112,20 +112,22 @@
 //! ```
 //!
 //! ## Use Cases
+//! 
 //! - **Retail Traders**: Test manual strategies before risking real capital.
 //! - **Algo Developers**: Build and optimize automated trading systems.
 //! - **Quant Researchers**: Backtest statistical arbitrage or machine learning models.
 //! - **Educational**: Teach trading concepts with a hands-on tool.
 //!
 //! ## Integrations
-//! | Crate          | Purpose                                                                                     |
-//! |----------------|---------------------------------------------------------------------------------------------|
-//! | [`ta`](https://crates.io/crates/ta) | Technical analysis indicators (EMA, RSI, MACD, etc.).                                      |
-//! | [`rayon`](https://crates.io/crates/rayon) | Parallel processing for optimization.                                                     |
-//! | [`serde`](https://crates.io/crates/serde) | Serialize/deserialize backtest results.                                                    |
-//! | [`plotters`](https://crates.io/crates/plotters) | Visualize equity curves and indicators.                                                   |
+//! 
+//! | Crate                                           | Purpose                                                           |
+//! |-------------------------------------------------|-------------------------------------------------------------------|
+//! | [`rayon`](https://crates.io/crates/rayon)       | Parallel processing for optimization.                             |
+//! | [`serde`](https://crates.io/crates/serde)       | Serialize/deserialize backtest results.                           |
+//! | [`plotters`](https://crates.io/crates/plotters) | Visualize market candlesticks data, equity curves and indicators. |
 //!
 //! ## Error Handling
+//! 
 //! BTS uses custom error types to handle:
 //! - Insufficient balance.
 //! - Invalid order types.
@@ -133,44 +135,42 @@
 //!
 //! Example:
 //! ```rust
-//! use bts::prelude::*;
-//! use chrono::DateTime;
+//! use bts_rs::prelude::*;
+//! use chrono::{DateTime, Duration};
 //!
-//! fn main() {
-//!     let candle = CandleBuilder::builder()
-//!         .open(100.0)
-//!         .high(110.0)
-//!         .low(95.0)
-//!         .close(105.0)
-//!         .volume(1.0)
-//!         .bid(0.5)
-//!         .open_time(DateTime::default())
-//!         .close_time(DateTime::default())
-//!         .build()
-//!         .unwrap();
-//!
-//!     // Initialize backtest with \$10,000
-//!     let mut backtest = Backtest::new(vec![candle], 10_000.0, None).unwrap();
-//!
-//!     // Execute a market buy order
-//!     backtest
-//!         .run(|bt, _candle| {
-//!             let order: Order = (OrderType::Market(102.0), 1.0, OrderSide::Buy).into();
-//!             match bt.place_order(order) {
-//!                Ok(_) => println!("Order in the pool!"),
-//!                Err(_) => eprintln!("Error to place an order")
-//!             }
-//!             Ok(())
-//!         })
-//!         .unwrap();
-//! }
+//! let candle = CandleBuilder::builder()
+//!     .open(100.0)
+//!     .high(110.0)
+//!     .low(95.0)
+//!     .close(105.0)
+//!     .volume(1.0)
+//!     .bid(0.5)
+//!     .open_time(DateTime::default())
+//!     .close_time(DateTime::default() + Duration::days(1))
+//!     .build()
+//!     .unwrap();
+//! // Initialize backtest with \$10,000
+//! let mut backtest = Backtest::new(vec![candle], 10_000.0, None).unwrap();
+//! // Execute a market buy order
+//! backtest
+//!     .run(|bt, candle| {
+//!         let order: Order = (OrderType::Market(102.0), 1.0, OrderSide::Buy).into();
+//!         match bt.place_order(candle, order) {
+//!            Ok(_) => println!("Order in the pool!"),
+//!            Err(_) => eprintln!("Error to place an order")
+//!         }
+//!         Ok(())
+//!     })
+//!     .unwrap();
 //! ```
 //!
 //! ## Contributing
-//! Contributions are welcome! See [`CONTRIBUTING.md`](https://github.com/raonagos/bts/blob/main/CONTRIBUTING.md).
+//! 
+//! Contributions are welcome! See [`CONTRIBUTING.md`](https://github.com/raonagos/bts-rs/blob/master/CONTRIBUTING.md).
 //!
 //! ## License
-//! MIT
+//! 
+//! The project is licensed under the [`MIT`](https://github.com/raonagos/bts-rs/blob/master/LICENSE).
 #![warn(missing_docs)]
 
 /// Core trading engine components: orders, positions, wallet, and backtest logic.
@@ -190,6 +190,10 @@ pub mod metrics;
 #[cfg(feature = "optimizer")]
 pub mod optimizer;
 
+/// Module for visualizing backtest results and candle charts.
+#[cfg(feature = "draws")]
+pub mod draws;
+
 /// Re-exports of commonly used types and traits for convenience.
 pub mod prelude {
     pub use super::*;
@@ -201,6 +205,9 @@ pub mod prelude {
 
     #[cfg(feature = "optimizer")]
     pub use crate::optimizer::*;
+
+    #[cfg(feature = "draws")]
+    pub use crate::draws::*;
 }
 
 use std::ops::{Add, Div, Mul, Sub};

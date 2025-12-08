@@ -2,7 +2,6 @@ use crate::errors::{Error, Result};
 
 /// Represents a trading wallet with balance and locked funds management.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug)]
 pub struct Wallet {
     // Initial balance used for reset
     initial_balance: f64,
@@ -19,7 +18,7 @@ pub struct Wallet {
 impl Wallet {
     /// Creates a new wallet with the given initial balance.
     /// Negative balances are rejected.
-    pub fn new(balance: f64) -> Result<Self> {
+    pub(crate) fn new(balance: f64) -> Result<Self> {
         if balance <= 0.0 {
             return Err(Error::NegZeroBalance(balance));
         }
@@ -33,19 +32,24 @@ impl Wallet {
         })
     }
 
-    #[cfg(feature = "metrics")]
-    pub(crate) fn initial_balance(&self) -> f64 {
+    /// Returns the initial balance.
+    pub fn initial_balance(&self) -> f64 {
         self.initial_balance
     }
 
-    #[cfg(feature = "metrics")]
-    pub(crate) fn locked(&self) -> f64 {
+    /// Returns the locked balance.
+    pub fn locked(&self) -> f64 {
         self.locked
     }
 
-    #[cfg(feature = "metrics")]
-    pub(crate) fn unrealized_pnl(&self) -> f64 {
+    /// Returns the unrealized pnl.
+    pub fn unrealized_pnl(&self) -> f64 {
         self.unrealized_pnl
+    }
+
+    /// Returns the fees paid to the market.
+    pub fn fees_paid(&self) -> f64 {
+        self.fees
     }
 
     /// Returns the balance.
@@ -65,11 +69,6 @@ impl Wallet {
             return Err(Error::NegFreeBalance(self.balance, self.locked));
         }
         Ok(free_balance)
-    }
-
-    /// Returns the fees paid to the market.
-    pub fn fees_paid(&self) -> f64 {
-        self.fees
     }
 
     /// Adds funds to the wallet.

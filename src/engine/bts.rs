@@ -1,3 +1,5 @@
+/* Tests only */
+
 use chrono::DateTime;
 
 use super::*;
@@ -170,14 +172,14 @@ fn scenario_place_and_delete_order_with_market_fees() {
     let _expected_total_cost = price + expected_fee; // 110 + 0.11 = 110.11
 
     let order = Order::from((OrderType::Market(price), 1.0, OrderSide::Buy));
-    bt.place_order(order.clone()).unwrap();
+    bt.place_order(&candle, order.clone()).unwrap();
 
     assert!(!bt.orders.is_empty());
     assert_eq!(bt.balance(), 1000.0);
     assert_eq!(bt.total_balance(), 1000.0);
     assert_eq!(bt.free_balance().unwrap(), 890.0); // 890 with fees \ 900 without fees
 
-    bt.delete_order(&order, true).unwrap();
+    bt.delete_order(&candle, &order, true).unwrap();
 
     assert!(bt.orders.is_empty());
     assert_eq!(bt.balance(), 1000.0);
@@ -199,7 +201,7 @@ fn scenario_place_and_delete_order_with_market_fees() {
         let open_fee = price * 1.0 * market_fee;
         let expected_total_cost = price + open_fee; // 100 + 0.10% = 110.0
 
-        bt.place_order(order).unwrap();
+        bt.place_order(&candle, order).unwrap();
         bt.execute_orders(&candle).unwrap();
 
         assert!(!bt.positions.is_empty());
@@ -236,7 +238,7 @@ fn scenario_open_position_with_market_fees() {
     let open_fee = price * 1.0 * market_fee;
     let expected_total_cost = price + open_fee; // 100 + 0.10% = 110.0
 
-    bt.place_order(order).unwrap();
+    bt.place_order(&candle, order).unwrap();
     bt.execute_orders(&candle).unwrap();
 
     assert!(!bt.positions.is_empty());
@@ -267,7 +269,7 @@ fn scenario_place_and_delete_auto_a_market_order() {
     let price = candle.close(); // 110
 
     let order = Order::from((OrderType::Market(price * 3.0), 1.0, OrderSide::Buy));
-    bt.place_order(order).unwrap(); // lock amount 110
+    bt.place_order(&candle, order).unwrap(); // lock amount 110
 
     assert_eq!(bt.balance(), 1000.0);
     assert_eq!(bt.total_balance(), 1000.0);
@@ -291,14 +293,14 @@ fn scenario_place_and_delete_order() {
     let price = candle.close(); // 110
 
     let order = Order::from((OrderType::Market(price), 1.0, OrderSide::Buy));
-    bt.place_order(order.clone()).unwrap(); // lock amount 110
+    bt.place_order(&candle, order.clone()).unwrap(); // lock amount 110
 
     assert!(!bt.orders.is_empty());
     assert_eq!(bt.balance(), 1000.0);
     assert_eq!(bt.total_balance(), 1000.0);
     assert_eq!(bt.free_balance().unwrap(), 890.0);
 
-    bt.delete_order(&order, true).unwrap(); // unlock amount 110
+    bt.delete_order(&candle, &order, true).unwrap(); // unlock amount 110
 
     assert!(bt.orders.is_empty());
     assert_eq!(bt.balance(), 1000.0);
@@ -317,7 +319,7 @@ fn scenario_open_long_position_and_take_profit() {
 
     let take_profit = OrderType::TakeProfitAndStopLoss(price.addpercent(20.0), 0.0);
     let order = Order::from((OrderType::Market(price), take_profit, 1.0, OrderSide::Buy));
-    bt.place_order(order).unwrap();
+    bt.place_order(&candle, order).unwrap();
 
     assert!(!bt.orders.is_empty());
     assert!(bt.positions.is_empty());
@@ -366,7 +368,7 @@ fn scenario_open_long_position_and_stop_loss() {
 
     let stop_loss = OrderType::TakeProfitAndStopLoss(0.0, price - 20.0);
     let order = Order::from((OrderType::Market(price), stop_loss, 1.0, OrderSide::Buy));
-    bt.place_order(order).unwrap();
+    bt.place_order(&candle, order).unwrap();
 
     assert!(!bt.orders.is_empty());
     assert!(bt.positions.is_empty());
@@ -415,7 +417,7 @@ fn scenario_open_short_position_and_take_profit() {
 
     let take_profit = OrderType::TakeProfitAndStopLoss(price - 20.0, 0.0);
     let order = Order::from((OrderType::Market(price), take_profit, 1.0, OrderSide::Sell));
-    bt.place_order(order).unwrap();
+    bt.place_order(&candle, order).unwrap();
 
     assert!(!bt.orders.is_empty());
     assert!(bt.positions.is_empty());
@@ -464,7 +466,7 @@ fn scenario_open_short_position_and_stop_loss() {
 
     let stop_loss = OrderType::TakeProfitAndStopLoss(0.0, price.addpercent(20.0));
     let order = Order::from((OrderType::Market(price), stop_loss, 1.0, OrderSide::Sell));
-    bt.place_order(order).unwrap();
+    bt.place_order(&candle, order).unwrap();
 
     assert!(!bt.orders.is_empty());
     assert!(bt.positions.is_empty());
@@ -516,7 +518,7 @@ fn scenario_open_long_position_with_trailing_stop_profit() {
 
     let trailing_stop = OrderType::TrailingStop(price, 10.0);
     let order = Order::from((OrderType::Market(price), trailing_stop, 1.0, OrderSide::Buy));
-    bt.place_order(order).unwrap();
+    bt.place_order(&candle, order).unwrap();
     bt.execute_orders(&candle).unwrap();
 
     assert!(!bt.positions.is_empty());
@@ -567,7 +569,7 @@ fn scenario_open_long_position_with_trailing_stop_loss() {
 
     let trailing_stop = OrderType::TrailingStop(price, 10.0);
     let order = Order::from((OrderType::Market(price), trailing_stop, 1.0, OrderSide::Buy));
-    bt.place_order(order).unwrap();
+    bt.place_order(&candle, order).unwrap();
     bt.execute_orders(&candle).unwrap();
 
     assert!(!bt.positions.is_empty());
@@ -604,7 +606,7 @@ fn scenario_with_aggregator() {
     let mut ic = 0;
     let aggregator = TestAggregator;
     bt.run_with_aggregator(&aggregator, |_, candles| {
-        let candle_one = candles.get(0);
+        let candle_one = candles.first();
         let candle_two = candles.get(1);
 
         // candle_two is none at ic = 0

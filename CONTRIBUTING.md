@@ -5,6 +5,7 @@ Thanks for contributing to **BTS**! Here’s how you can help:
 ---
 
 ## **Reporting Bugs**
+
 Open an **issue** with:
 - Clear description of the bug.
 - Steps to reproduce.
@@ -13,6 +14,7 @@ Open an **issue** with:
 ---
 
 ## **Suggesting Improvements**
+
 Open an **issue** with:
 - Description of your idea.
 - Why it’s useful.
@@ -24,7 +26,7 @@ Open an **issue** with:
 
 1. **Fork** and clone the repo:
 ```bash
-git clone https://github.com/raonagos/bts.git
+git clone https://github.com/raonagos/bts-rs.git
 cd bts
 ```
 
@@ -36,7 +38,7 @@ git checkout -b my-feature
 
 3. Make changes and test:
 ```bash
-cargo test
+cargo test // or run build.sh
 ```
 
 4. Submit a Pull Request (PR) to main.
