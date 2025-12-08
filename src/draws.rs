@@ -1,9 +1,10 @@
-//! Module for visualizing backtest results and candle charts using the `plotters` library.
+//! Module for visualizing backtest results and candle charts.
 
 use crate::engine::{Backtest, Candle};
 use crate::errors::{Error, Result};
 #[cfg(feature = "metrics")]
 use crate::metrics::{Event, Metrics};
+
 use chrono::Duration;
 use plotters::backend::{BitMapBackend, DrawingBackend, SVGBackend};
 use plotters::coord::Shift;
@@ -18,6 +19,7 @@ const X_LABEL_SIZE: i32 = 20;
 const Y_LABEL_SIZE: i32 = 20;
 
 /// Output formats for the generated charts with output filename.
+#[derive(Default)]
 pub enum DrawOutput {
     /// Save to the output SVG file.
     Svg(&'static str),
@@ -26,13 +28,8 @@ pub enum DrawOutput {
     /// Save to the output HTML file (not implemented).
     Html(&'static str),
     /// Print to the current console (not implemented).
+    #[default]
     Inner,
-}
-
-impl Default for DrawOutput {
-    fn default() -> Self {
-        Self::Inner
-    }
 }
 
 /// Configuration options for chart generation.
@@ -199,6 +196,7 @@ impl<'d> Draw<'d> {
             (rest_area.clone(), rest_area.clone())
         };
 
+        // draw all charts
         self.draw_price_chart(&price_area, backtest, title)?;
         if self.options.show_volume {
             self.draw_volume_chart(&volume_area, candles)?;
@@ -230,15 +228,13 @@ impl<'d> Draw<'d> {
         let balances = backtest
             .events()
             .filter_map(|evt| match evt {
-                Event::WalletUpdate {
-                    timestamp,
-                    balance, ..
-                } => Some((*timestamp, *balance)),
+                Event::WalletUpdate { datetime, balance, .. } => Some((*datetime, *balance)),
                 _ => None,
             })
-            .fold(Vec::new(), |mut acc, (timestamp, balance)| {
-                if !acc.iter().any(|(t, _)| t == &timestamp) {
-                    acc.push((timestamp, balance));
+            // unique by time
+            .fold(Vec::new(), |mut acc, (datetime, balance)| {
+                if !acc.iter().any(|(d, _)| d == &datetime) {
+                    acc.push((datetime, balance));
                 }
                 acc
             });
@@ -322,9 +318,44 @@ impl<'d> Draw<'d> {
 
         #[cfg(feature = "metrics")]
         if self.options.show_metrics {
+            use crate::PercentCalculus;
+
+            let initial_balance = backtest.initial_balance();
+            let red_balances = balances.iter().filter(|(_, balance)| *balance < initial_balance);
+            let blue_balances = balances.iter().filter(|(_, balance)| *balance >= initial_balance);
+
+            let opened_positions = backtest
+                .events()
+                .filter_map(|e| match e {
+                    Event::AddPosition(date_time, position) => Some((date_time, position.entry_price())),
+                    _ => None,
+                })
+                .map(|(datetime, price)| Circle::new((*datetime, price.unwrap().addpercent(5.0)), 2, BLUE.filled()));
+            let closed_positions = backtest
+                .events()
+                .filter_map(|e| match e {
+                    Event::DelPosition(date_time, position) => Some((date_time, position.entry_price())),
+                    _ => None,
+                })
+                .map(|(datetime, price)| Circle::new((*datetime, price.unwrap().addpercent(5.0)), 2, RED.filled()));
+
+            chart
+                .draw_series(opened_positions)
+                .map_err(|e| Error::Plotters(e.to_string()))?;
+            chart
+                .draw_series(closed_positions)
+                .map_err(|e| Error::Plotters(e.to_string()))?;
+
             chart
                 .draw_secondary_series(LineSeries::new(
-                    balances.iter().map(|(t, b)| (*t, *b)),
+                    blue_balances.map(|(datetime, balance)| (*datetime, *balance)),
+                    BLUE,
+                ))
+                .map_err(|e| Error::Plotters(e.to_string()))?;
+
+            chart
+                .draw_secondary_series(LineSeries::new(
+                    red_balances.map(|(datetime, balance)| (*datetime, *balance)),
                     RED,
                 ))
                 .map_err(|e| Error::Plotters(e.to_string()))?;

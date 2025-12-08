@@ -52,7 +52,7 @@ pub enum Event {
     /// It contains the current state of the wallet.
     WalletUpdate {
         /// Moment
-        timestamp: DateTime<Utc>,
+        datetime: DateTime<Utc>,
         /// Realized profit and loss.
         pnl: f64,
         /// Total fees paid.
@@ -67,9 +67,9 @@ pub enum Event {
 }
 
 impl From<(DateTime<Utc>, &Wallet)> for Event {
-    fn from((timestamp, value): (DateTime<Utc>, &Wallet)) -> Self {
+    fn from((datetime, value): (DateTime<Utc>, &Wallet)) -> Self {
         Self::WalletUpdate {
-            timestamp,
+            datetime,
             locked: value.locked(),
             fees: value.fees_paid(),
             balance: value.balance(),
@@ -230,7 +230,7 @@ fn create_position(pnl: f64) -> Position {
 fn max_drawdown() {
     let events = vec![
         Event::WalletUpdate {
-            timestamp: DateTime::default(),
+            datetime: DateTime::default(),
             pnl: 0.0,
             fees: 0.0,
             free: 10000.0,
@@ -238,7 +238,7 @@ fn max_drawdown() {
             balance: 10000.0,
         },
         Event::WalletUpdate {
-            timestamp: DateTime::default(),
+            datetime: DateTime::default(),
             pnl: 0.0,
             fees: 0.0,
             free: 12000.0,
@@ -246,7 +246,7 @@ fn max_drawdown() {
             balance: 12000.0,
         },
         Event::WalletUpdate {
-            timestamp: DateTime::default(),
+            datetime: DateTime::default(),
             pnl: 0.0,
             fees: 0.0,
             free: 9000.0,
@@ -254,7 +254,7 @@ fn max_drawdown() {
             balance: 9000.0,
         },
         Event::WalletUpdate {
-            timestamp: DateTime::default(),
+            datetime: DateTime::default(),
             pnl: 0.0,
             fees: 0.0,
             free: 11000.0,
@@ -307,7 +307,7 @@ fn profit_factor_no_trades() {
 fn sharpe_ratio() {
     let events = vec![
         Event::WalletUpdate {
-            timestamp: DateTime::default(),
+            datetime: DateTime::default(),
 
             pnl: 0.0,
             fees: 0.0,
@@ -316,7 +316,7 @@ fn sharpe_ratio() {
             balance: 10000.0,
         },
         Event::WalletUpdate {
-            timestamp: DateTime::default(),
+            datetime: DateTime::default(),
             pnl: 0.0,
             fees: 0.0,
             free: 10500.0,
@@ -324,7 +324,7 @@ fn sharpe_ratio() {
             balance: 10500.0,
         },
         Event::WalletUpdate {
-            timestamp: DateTime::default(),
+            datetime: DateTime::default(),
             pnl: 0.0,
             fees: 0.0,
             free: 10300.0,
@@ -332,7 +332,7 @@ fn sharpe_ratio() {
             balance: 10300.0,
         },
         Event::WalletUpdate {
-            timestamp: DateTime::default(),
+            datetime: DateTime::default(),
             pnl: 0.0,
             fees: 0.0,
             free: 10700.0,

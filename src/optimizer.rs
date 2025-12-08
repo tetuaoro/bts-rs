@@ -211,7 +211,7 @@ fn optimizer_with_ema_macd() {
                         quantity,
                         OrderSide::Buy,
                     );
-                    bt.place_order(order.into())?;
+                    bt.place_order(candle, order.into())?;
                 }
                 Ok(())
             },

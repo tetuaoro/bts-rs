@@ -25,7 +25,6 @@ thiserror = "2.0.17"
 rayon = { version = "1.11.0", optional = true }
 plotters = { version = "0.3.7", optional = true }
 num_cpus = { version = "1.17.0", optional = true }
-serde_json = { version = "1.0.145", optional = true }
 serde = { version = "1.0.226", features = ["derive"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -34,13 +33,14 @@ getrandom = "0.3.4"
 # also update the doc feature below
 [features]
 metrics = []
-serde = ["chrono/serde", "dep:serde"]
+draws = ["dep:plotters"]
 optimizer = ["dep:rayon", "dep:num_cpus"]
-draws = ["dep:plotters", "dep:serde_json"]
+
+serde = ["chrono/serde", "dep:serde"]
 wasm = ["rayon/web_spin_lock", "getrandom/wasm_js"]
 
 [package.metadata.docs.rs]
-features = ["metrics", "optimizer", "draws"]
+features = ["metrics", "draws", "optimizer"]
 
 [dev-dependencies]
 ta = "0.5.0"

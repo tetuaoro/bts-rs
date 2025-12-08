@@ -47,7 +47,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 quantity,
                 OrderSide::Buy,
             );
-            bt.place_order(order.into())?;
+            bt.place_order(candle_one, order.into())?;
         }
 
         Ok(())

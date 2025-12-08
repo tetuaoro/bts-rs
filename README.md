@@ -14,35 +14,14 @@ on historical or generated data.
 - **Order & Position Management**: Supports market orders, limit orders, take-profit,
   stop-loss, and trailing stops.
 
-## **Core Concepts**
-
-### **Candle**
-
-Represents a candlestick with OHLCV data (Open, High, Low, Close, Volume).
-Used as the basic unit for market data.
-
-### **Order**
-
-Represents a trading order (buy or sell) with a specific type (market, limit, etc.).
-Orders can be placed and executed based on market conditions.
-
-### **Position**
-
-Represents an open market position with exit rules (take-profit, stop-loss, trailing stop).
-Positions are managed by the backtesting engine.
-
-### **Event**
-
-Records backtest events (order/position additions/removals) for detailed tracking.
-
 ## **Usage Example**
 ```rust
 use bts_rs::prelude::*;
 
 // Candlestick data
 let data = vec![
-    Candle::from((100.0, 110.0, 95.0, 105.0, 1000.0)),
-    Candle::from((105.0, 115.0, 100.0, 110.0, 1000.0)),
+    CandleBuilder::builder().open(100.0).high(110.0).low(95.0).close(105.0).volume(1000.0).build().unwrap(),
+    CandleBuilder::builder().open(105.0).high(115.0).low(100.0).close(110.0).volume(1000.0).build().unwrap(),
 ];
 
 // Initialize backtest
@@ -53,7 +32,7 @@ bts.run(|bt, candle| {
     // Example: Buy if closing price > opening price
     if candle.close() > candle.open() {
         let order = Order::from((OrderType::Market(candle.close()), 1.0, OrderSide::Buy));
-        bt.place_order(order)?;
+        bt.place_order(candle, order)?;
     }
     Ok(())
 }).unwrap();
@@ -63,6 +42,8 @@ println!("Final balance: {}", bts.balance());
 println!("Number of positions: {}", bts.positions().count());
 println!("Number of events: {}", bts.events().count());
 ```
+
+See more examples in [examples](examples) folder.
 
 ## **Performance Metrics**
 
@@ -83,6 +64,7 @@ BTS is compatible with popular indicators crates for technical analysis, allowin
 - **Risk Management**: Built-in support for stop-loss and take-profit rules.
 - **Performance Optimization**: Uses efficient data structures for order/position management.
 - **Parameters Optimization**: Computes the best parameters *(indicators, RR, etc...)* for your strategy.
+- **Draw chart and metrics**: Draws the candlesticks data, balance, positions and metrics.
 
 ## **Error Handling**
 
@@ -91,13 +73,14 @@ BTS provides comprehensive error handling for:
 - Invalid orders/positions
 - Market data errors
 - Configuration issues
+and more.
 
 ## **Getting Started**
 
 Add BTS to your `Cargo.toml`:
 ```toml
 [dependencies]
-bts_rs = "0.8"
+bts_rs = "*"
 ```
 
 Then import and use it in your project:
@@ -107,7 +90,7 @@ use bts_rs::prelude::*;
 
 ## Contributing
 
-See [Contributing](CONTRIBUTING.md) file to contribute to this project.
+Contributions are welcome! See [Contributing](CONTRIBUTING.md) file to contribute to this project.
 
 ## **License**
 

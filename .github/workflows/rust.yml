@@ -14,26 +14,26 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Simple check
       run: cargo check --verbose
-    - name: Check feature serde
-      run: cargo check --features serde --verbose
-    - name: Check feature metric
+    - name: Check feature metrics
       run: cargo check --features metrics --verbose
     - name: Check feature optimizer
       run: cargo check --features optimizer --verbose
-    - name: Check all
-      run: cargo check --all-features --verbose
-    
-    - name: Install wasm32 target
-      run: rustup target add wasm32-unknown-unknown
-    
-    - name: Check wasm
-      run: cargo check --target=wasm32-unknown-unknown --verbose
-    - name: Check wasm all
-      run: cargo check --target=wasm32-unknown-unknown --all-features --verbose
-    
-    - name: Run tests
+    - name: Check feature draws
+      run: cargo check --features draws --verbose
+    - name: Check feature draws and metrics
+      run: cargo check --features draws,metrics --verbose
+
+
+    - name: Run simple test
       run: cargo test --verbose
-    - name: Run tests all
-      run: cargo test --all-features --verbose
+    - name: Test feature metrics
+      run: cargo test --features metrics --verbose
+    - name: Test feature optimizer
+      run: cargo test --features optimizer --verbose
+    - name: Test feature draws
+      run: cargo test --features draws --verbose
+    - name: Test feature draws and metrics
+      run: cargo test --features draws,metrics --verbose

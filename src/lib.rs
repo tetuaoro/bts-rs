@@ -13,15 +13,12 @@
 //!
 //! ## Core Components
 //! 
-//! | Component   | Description                                                                                     |
-//! |-------------|-------------------------------------------------------------------------------------------------|
-//! | **`Candle`** | Represents OHLCV (Open, High, Low, Close, Volume) data for a single time period.               |
-//! | **`Order`**  | Market, limit, or conditional orders (e.g., stop-loss, take-profit).                          |
-//! | **`Position`** | Open trades with configurable exit rules (e.g., trailing stops).                              |
-//! | **`Wallet`** | Tracks balance, locked funds, unrealized P&L, and fees.                                       |
-//! | **`Metrics`** | Calculates performance metrics: P&L, drawdown, Sharpe ratio, win rate, and more.             |
-//! | **`Optimizer`** | Calculates bests parameters *(indicators, RR, etc...)*.             |
-//! | **`Backtest`** | The engine that simulates strategy execution over historical data.                          |
+//! | Component       | Description                                                                      |
+//! |---------------- |----------------------------------------------------------------------------------|
+//! | **`Metrics`**   | Calculates performance metrics: P&L, drawdown, Sharpe ratio, win rate, and more. |
+//! | **`Optimizer`** | Calculates bests parameters *(indicators, RR, etc...)*.                          |
+//! | **`Draw`**      | Draw candlestick data, balance and metrics to a *SVG* or *PNG* file.             |
+//! | **`Backtest`**  | The engine that simulates strategy execution over historical data.               |
 //!
 //! ## Features
 //! 
@@ -30,24 +27,23 @@
 //!
 //! ### 2. **Order Types & Exit Rules**
 //! 
-//! | Order Type               | Description                                                                                     |
-//! |--------------------------|-------------------------------------------------------------------------------------------------|
-//! | **Market Order**         | Executes immediately at the current price.                                                    |
-//! | **Limit Order**          | Executes only at a specified price or better.                                                 |
-//! | **Take-Profit**          | Closes the position when a target price is reached.                                          |
-//! | **Stop-Loss**            | Closes the position to limit losses.                                                          |
-//! | **Trailing Stop**        | Dynamically adjusts the stop price based on market movements.                                |
-//! | **Take-Profit + Stop-Loss** | Combines both rules for risk management.                                                   |
+//! | Order Type                  | Description                                                   |
+//! |-----------------------------|---------------------------------------------------------------|
+//! | **Market Order**            | Executes immediately at the current price.                    |
+//! | **Limit Order**             | Executes only at a specified price or better.                 |
+//! | **Take-Profit**             | Closes the position when a target price is reached.           |
+//! | **Stop-Loss**               | Closes the position to limit losses.                          |
+//! | **Trailing Stop**           | Dynamically adjusts the stop price based on market movements. |
+//! | **Take-Profit + Stop-Loss** | Combines both rules for risk management.                      |
 //!
 //! ### 3. **Performance Metrics**
 //! 
-//! | Metric               | Description                                                                                     |
-//! |----------------------|-------------------------------------------------------------------------------------------------|
-//! | **Max Drawdown**     | Largest peak-to-trough decline in account balance (%).                                        |
-//! | **Profit Factor**    | Ratio of gross profits to gross losses.                                                       |
-//! | **Sharpe Ratio**     | Risk-adjusted return (higher = better).                                                      |
-//! | **Win Rate**         | Percentage of winning trades.                                                                 |
-//! | **Sortino Ratio**    | Like Sharpe ratio, but focuses only on downside volatility.                                  |
+//! | Metric               | Description                                            |
+//! |----------------------|--------------------------------------------------------|
+//! | **Max Drawdown**     | Largest peak-to-trough decline in account balance (%). |
+//! | **Profit Factor**    | Ratio of gross profits to gross losses.                |
+//! | **Sharpe Ratio**     | Risk-adjusted return (higher = better).                |
+//! | **Win Rate**         | Percentage of winning trades.                          |
 //!
 //! ### 4. **Optimization Tools**
 //! 
@@ -65,7 +61,7 @@
 //! ### 2. Run a Simple Backtest:
 //! ```rust
 //! use bts_rs::prelude::*;
-//! use chrono::DateTime;
+//! use chrono::{DateTime, Duration};
 //!
 //! let candle = CandleBuilder::builder()
 //!     .open(100.0)
@@ -75,7 +71,7 @@
 //!     .volume(1.0)
 //!     .bid(0.5)
 //!     .open_time(DateTime::default())
-//!     .close_time(DateTime::default())
+//!     .close_time(DateTime::default() + Duration::days(1))
 //!     .build()
 //!     .unwrap();
 //! 
@@ -84,12 +80,12 @@
 //! 
 //! // Execute a market buy order
 //! backtest
-//!     .run(|bt, _candle| {
+//!     .run(|bt, candle| {
 //!         let order: Order = (OrderType::Market(102.0), 1.0, OrderSide::Buy).into();
-//!         bt.place_order(order).unwrap();
+//!         bt.place_order(candle, order).unwrap();
 //!         // Close the position at \$104.0
 //!         if let Some(position) = bt.positions().last().cloned() {
-//!             bt.close_position(&position, 104.0, true).unwrap();
+//!             bt.close_position(candle, &position, 104.0, true).unwrap();
 //!         }
 //!         Ok(())
 //!     })
@@ -124,11 +120,11 @@
 //!
 //! ## Integrations
 //! 
-//! | Crate          | Purpose                                                                                     |
-//! |----------------|---------------------------------------------------------------------------------------------|
-//! | [`rayon`](https://crates.io/crates/rayon) | Parallel processing for optimization.                                                     |
-//! | [`serde`](https://crates.io/crates/serde) | Serialize/deserialize backtest results.                                                    |
-//! | [`plotters`](https://crates.io/crates/plotters) | Visualize market candlesticks data, equity curves and indicators.                                                   |
+//! | Crate                                           | Purpose                                                           |
+//! |-------------------------------------------------|-------------------------------------------------------------------|
+//! | [`rayon`](https://crates.io/crates/rayon)       | Parallel processing for optimization.                             |
+//! | [`serde`](https://crates.io/crates/serde)       | Serialize/deserialize backtest results.                           |
+//! | [`plotters`](https://crates.io/crates/plotters) | Visualize market candlesticks data, equity curves and indicators. |
 //!
 //! ## Error Handling
 //! 
@@ -140,7 +136,7 @@
 //! Example:
 //! ```rust
 //! use bts_rs::prelude::*;
-//! use chrono::DateTime;
+//! use chrono::{DateTime, Duration};
 //!
 //! let candle = CandleBuilder::builder()
 //!     .open(100.0)
@@ -150,16 +146,16 @@
 //!     .volume(1.0)
 //!     .bid(0.5)
 //!     .open_time(DateTime::default())
-//!     .close_time(DateTime::default())
+//!     .close_time(DateTime::default() + Duration::days(1))
 //!     .build()
 //!     .unwrap();
 //! // Initialize backtest with \$10,000
 //! let mut backtest = Backtest::new(vec![candle], 10_000.0, None).unwrap();
 //! // Execute a market buy order
 //! backtest
-//!     .run(|bt, _candle| {
+//!     .run(|bt, candle| {
 //!         let order: Order = (OrderType::Market(102.0), 1.0, OrderSide::Buy).into();
-//!         match bt.place_order(order) {
+//!         match bt.place_order(candle, order) {
 //!            Ok(_) => println!("Order in the pool!"),
 //!            Err(_) => eprintln!("Error to place an order")
 //!         }
@@ -174,7 +170,7 @@
 //!
 //! ## License
 //! 
-//! [`MIT`](https://github.com/raonagos/bts-rs/blob/master/LICENSE)
+//! The project is licensed under the [`MIT`](https://github.com/raonagos/bts-rs/blob/master/LICENSE).
 #![warn(missing_docs)]
 
 /// Core trading engine components: orders, positions, wallet, and backtest logic.

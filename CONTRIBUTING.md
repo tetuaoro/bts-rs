@@ -38,7 +38,7 @@ git checkout -b my-feature
 
 3. Make changes and test:
 ```bash
-cargo test
+cargo test // or run build.sh
 ```
 
 4. Submit a Pull Request (PR) to main.
