@@ -17,11 +17,12 @@ on historical or generated data.
 ## **Usage Example**
 ```rust
 use bts_rs::prelude::*;
+use chrono::{DateTime, Duration};
 
 // Candlestick data
 let data = vec![
-    CandleBuilder::builder().open(100.0).high(110.0).low(95.0).close(105.0).volume(1000.0).build().unwrap(),
-    CandleBuilder::builder().open(105.0).high(115.0).low(100.0).close(110.0).volume(1000.0).build().unwrap(),
+    CandleBuilder::builder().open(100.0).high(110.0).low(95.0).close(105.0).open_time(DateTime::default()).close_time(DateTime::default() + Duration::days(1)).volume(1000.0).build().unwrap(),
+    CandleBuilder::builder().open(105.0).high(115.0).low(100.0).close(110.0).open_time(DateTime::default()).close_time(DateTime::default() + Duration::days(1)).volume(1000.0).build().unwrap(),
 ];
 
 // Initialize backtest

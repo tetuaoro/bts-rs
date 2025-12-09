@@ -12,11 +12,11 @@
 - [x] Parameters optimization
 - [x] Strategy examples (5+ templates)
 - [x] WASM compilation support
+- [x] Automated report generation (PDF/HTML)
 
 ## 📌 In Progress
 ~~- [ ] Add methods to modify orders/positions (update SL/TP/trailing stop)~~
 ~~- [ ] Multi-strategy parallel execution~~
-- [ ] Automated report generation (PDF/HTML)
 - [ ] Tracing and Progress when running strategy
 
 ## 🚀 Road to v1.0.0
