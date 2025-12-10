@@ -16,6 +16,8 @@ on historical or generated data.
 
 ## **Usage Example**
 ```rust
+use std::sync::Arc;
+
 use bts_rs::prelude::*;
 use chrono::{DateTime, Duration};
 
@@ -25,8 +27,10 @@ let data = vec![
     CandleBuilder::builder().open(105.0).high(115.0).low(100.0).close(110.0).open_time(DateTime::default()).close_time(DateTime::default() + Duration::days(1)).volume(1000.0).build().unwrap(),
 ];
 
+let candles = Arc::from_iter(data);
+
 // Initialize backtest
-let mut bts = Backtest::new(data, 1000.0, None).unwrap();
+let mut bts = Backtest::new(candles, 1000.0, None).unwrap();
 
 // Custom strategy
 bts.run(|bt, candle| {
@@ -73,8 +77,7 @@ BTS provides comprehensive error handling for:
 - Insufficient funds
 - Invalid orders/positions
 - Market data errors
-- Configuration issues
-and more.
+- Configuration issues and more.
 
 ## **Getting Started**
 

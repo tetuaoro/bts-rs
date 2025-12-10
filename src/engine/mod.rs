@@ -11,7 +11,10 @@ mod order;
 mod position;
 mod wallet;
 
-use std::collections::{VecDeque, vec_deque::Iter};
+use std::{
+    collections::{VecDeque, vec_deque::Iter},
+    sync::Arc,
+};
 
 use crate::{
     PercentCalculus,
@@ -46,7 +49,7 @@ pub trait Aggregation {
     fn factors(&self) -> &[usize];
 
     /// Aggregates a set of candles into a single candle.
-    fn aggregate(&self, candles: &[Candle]) -> Result<Candle> {
+    fn aggregate(&self, candles: &[&Candle]) -> Result<Candle> {
         if candles.is_empty() {
             return Err(Error::CandleDataEmpty);
         }
@@ -77,17 +80,19 @@ pub trait Aggregation {
     }
 
     /// Determines if the current set of candles should be aggregated.
-    fn should_aggregate(&self, factor: usize, candles: &[Candle]) -> bool {
+    fn should_aggregate(&self, factor: usize, candles: &[&Candle]) -> bool {
         candles.len() == factor
     }
 }
 
 /// Backtesting engine for trading strategies.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone)]
 pub struct Backtest {
+    #[cfg(test)]
     index: usize,
     wallet: Wallet,
-    data: Vec<Candle>,
+    data: Arc<[Candle]>,
     #[cfg(feature = "metrics")]
     events: Vec<Event>,
     orders: VecDeque<Order>,
@@ -121,7 +126,7 @@ impl Backtest {
     ///
     /// ### Returns
     /// The new backtest instance or an error.
-    pub fn new(data: Vec<Candle>, initial_balance: f64, market_fees: Option<(f64, f64)>) -> Result<Self> {
+    pub fn new(data: Arc<[Candle]>, initial_balance: f64, market_fees: Option<(f64, f64)>) -> Result<Self> {
         if data.is_empty() {
             return Err(Error::CandleDataEmpty);
         }
@@ -134,6 +139,7 @@ impl Backtest {
 
         Ok(Self {
             data,
+            #[cfg(test)]
             index: 0,
             market_fees,
             #[cfg(feature = "metrics")]
@@ -152,11 +158,6 @@ impl Backtest {
     /// Returns an iterator over the data.
     pub fn candles(&self) -> std::slice::Iter<'_, Candle> {
         self.data.iter()
-    }
-
-    /// Returns the current candle.
-    pub fn current_candle(&self) -> Result<&Candle> {
-        self.data.get(self.index).ok_or(Error::CandleNotFound)
     }
 
     /// Returns an iterator over the pending orders.
@@ -185,7 +186,7 @@ impl Backtest {
     #[allow(unused_variables)]
     pub fn place_order(&mut self, candle: &Candle, order: Order) -> Result<()> {
         self.wallet.lock(order.cost()?)?;
-        self.orders.push_back(order.clone());
+        self.orders.push_back(order);
         #[cfg(feature = "metrics")]
         {
             let open_time = candle.open_time();
@@ -216,8 +217,8 @@ impl Backtest {
         #[cfg(feature = "metrics")]
         {
             let open_time = candle.open_time();
+            self.events.push(Event::DelOrder(open_time, *order));
             self.events.push(Event::from((open_time, &self.wallet)));
-            self.events.push(Event::DelOrder(open_time, order.clone()));
         }
         Ok(())
     }
@@ -233,7 +234,7 @@ impl Backtest {
                 self.wallet.sub_fees(position.cost()? * limit_fee)?;
             };
         }
-        self.positions.push_back(position.clone());
+        self.positions.push_back(position);
         #[cfg(feature = "metrics")]
         {
             let open_time = candle.open_time();
@@ -285,11 +286,11 @@ impl Backtest {
         }
         #[cfg(feature = "metrics")]
         {
-            let mut position = position.clone();
-            position.set_exit_price(exit_price)?;
+            let mut _position = *position;
+            _position.set_exit_price(exit_price)?;
             let open_time = candle.open_time();
             self.events.push(Event::from((open_time, &self.wallet)));
-            self.events.push(Event::DelPosition(open_time, position));
+            self.events.push(Event::DelPosition(open_time, _position));
         }
         Ok(pnl)
     }
@@ -429,14 +430,12 @@ impl Backtest {
     where
         S: FnMut(&mut Self, &Candle) -> Result<()>,
     {
-        while self.index < self.data.len() {
-            let candle = self.current_candle()?.clone();
-            strategy(self, &candle)?;
-            self.execute_orders(&candle)?;
-            self.execute_positions(&candle)?;
-            self.index += 1;
+        let candles = Arc::clone(&self.data);
+        for candle in candles.iter() {
+            strategy(self, candle)?;
+            self.execute_orders(candle)?;
+            self.execute_positions(candle)?;
         }
-
         Ok(())
     }
 
@@ -472,17 +471,17 @@ impl Backtest {
             aggregated_candles_map.insert(factor, VecDeque::with_capacity(1));
         }
 
-        while self.index < self.data.len() {
-            let candle = self.current_candle()?.clone();
+        let candles = Arc::clone(&self.data);
+        for candle in candles.iter() {
             for (_, deque) in current_candles.iter_mut() {
-                deque.push_back(candle.clone());
+                deque.push_back(candle);
             }
 
             for (factor, agg) in aggregated_candles_map.iter_mut() {
                 let deque = current_candles.get_mut(factor).ok_or(Error::CandleDataEmpty)?;
-                let zero = deque.make_contiguous();
-                if aggregator.should_aggregate(*factor, zero) {
-                    let candle = aggregator.aggregate(zero)?;
+                let contiguous_candles = deque.make_contiguous();
+                if aggregator.should_aggregate(*factor, contiguous_candles) {
+                    let candle = aggregator.aggregate(contiguous_candles)?;
                     agg.pop_front();
                     deque.pop_front();
                     agg.push_back(candle);
@@ -491,9 +490,8 @@ impl Backtest {
 
             let agg_candles = aggregated_candles_map.values().flatten().collect();
             strategy(self, agg_candles)?;
-            self.execute_orders(&candle)?;
-            self.execute_positions(&candle)?;
-            self.index += 1;
+            self.execute_orders(candle)?;
+            self.execute_positions(candle)?;
         }
 
         Ok(())
@@ -501,12 +499,16 @@ impl Backtest {
 
     /// Resets the backtest to its initial state.
     pub fn reset(&mut self) {
-        self.index = 0;
-        self.wallet.reset();
+        #[cfg(test)]
+        {
+            self.index = 0;
+        }
         #[cfg(feature = "metrics")]
         {
             self.events = Vec::new();
         }
+
+        self.wallet.reset();
         self.orders = VecDeque::new();
         self.positions = VecDeque::new();
     }

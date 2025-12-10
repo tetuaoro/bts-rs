@@ -24,7 +24,7 @@ use chrono::{DateTime, Utc};
 /// - Updating the wallet balance.
 /// - Charging fees.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Event {
     /// An order has been added to the backtest.
     ///
@@ -61,7 +61,7 @@ pub enum Event {
         free: f64,
         /// Funds locked in open positions.
         locked: f64,
-        /// Total balance (free + locked + unrealized P&L).
+        /// Available balance.
         balance: f64,
     },
 }

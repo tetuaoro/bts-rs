@@ -5,12 +5,15 @@
 
 mod utils;
 
+use std::sync::Arc;
+
 use bts_rs::prelude::*;
 use ta::{indicators::*, *};
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let candles = utils::example_candles();
+    let data = utils::example_candles();
     let initial_balance = 1_000.0;
+    let candles = Arc::from_iter(data);
     let mut bts = Backtest::new(candles.clone(), initial_balance, None)?;
     let mut ema = ExponentialMovingAverage::new(100)?;
     let mut macd = MovingAverageConvergenceDivergence::default();

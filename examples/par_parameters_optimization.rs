@@ -5,6 +5,8 @@
 
 mod utils;
 
+use std::sync::Arc;
+
 use bts_rs::prelude::*;
 use ta::{indicators::*, *};
 
@@ -31,11 +33,12 @@ impl ParameterCombination for Parameters {
 }
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let candles = utils::example_candles();
+    let data = utils::example_candles();
     let initial_balance = 1_000.0;
+    let candles = Arc::from_iter(data);
     let opt = Optimizer::<Parameters>::new(candles.clone(), initial_balance, None);
 
-    let result = opt.with(
+    let result = opt.with_filter(
         |&(ema_period, m1, m2, m3)| {
             let ema = ExponentialMovingAverage::new(ema_period).map_err(|e| Error::Msg(e.to_string()))?;
             let macd = MovingAverageConvergenceDivergence::new(m1, m2, m3).map_err(|e| Error::Msg(e.to_string()))?;
@@ -61,6 +64,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             }
             Ok(())
         },
+        |b| b.balance(),
     )?;
 
     let mut result_with_sum = result

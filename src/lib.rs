@@ -60,6 +60,8 @@
 //!
 //! ### 2. Run a Simple Backtest:
 //! ```rust
+//! use std::sync::Arc;
+//! 
 //! use bts_rs::prelude::*;
 //! use chrono::{DateTime, Duration};
 //!
@@ -76,7 +78,7 @@
 //!     .unwrap();
 //!
 //! // Initialize backtest with \$10,000
-//! let mut backtest = Backtest::new(vec![candle], 10_000.0, None).unwrap();
+//! let mut backtest = Backtest::new(Arc::from_iter(vec![candle]), 10_000.0, None).unwrap();
 //!
 //! // Execute a market buy order
 //! backtest
@@ -131,11 +133,12 @@
 //! BTS uses custom error types to handle:
 //! - Insufficient balance.
 //! - Invalid order types.
-//! - Missing data (e.g., candles, positions).
-//! - And more.
+//! - Missing data (e.g., candles, positions) and more.
 //!
 //! Example:
 //! ```rust
+//! use std::sync::Arc;
+//! 
 //! use bts_rs::prelude::*;
 //! use chrono::{DateTime, Duration};
 //!
@@ -150,8 +153,10 @@
 //!     .close_time(DateTime::default() + Duration::days(1))
 //!     .build()
 //!     .unwrap();
+//! 
 //! // Initialize backtest with \$10,000
-//! let mut backtest = Backtest::new(vec![candle], 10_000.0, None).unwrap();
+//! let mut backtest = Backtest::new(Arc::from_iter(vec![candle]), 10_000.0, None).unwrap();
+//! 
 //! // Execute a market buy order
 //! backtest
 //!     .run(|bt, candle| {

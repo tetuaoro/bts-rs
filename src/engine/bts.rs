@@ -1,10 +1,12 @@
 /* Tests only */
 
+use std::sync::Arc;
+
 use chrono::DateTime;
 
 use super::*;
 
-fn get_data() -> Vec<Candle> {
+fn get_data() -> Arc<[Candle]> {
     let candle = CandleBuilder::builder()
         .open(100.0)
         .high(111.0)
@@ -16,10 +18,10 @@ fn get_data() -> Vec<Candle> {
         .build()
         .unwrap();
 
-    vec![candle]
+    Arc::from_iter(vec![candle])
 }
 
-fn get_long_data() -> Vec<Candle> {
+fn get_long_data() -> Arc<[Candle]> {
     let candle1 = CandleBuilder::builder()
         .open(90.0)
         .high(110.0)
@@ -51,10 +53,11 @@ fn get_long_data() -> Vec<Candle> {
         .build()
         .unwrap();
 
-    vec![candle1, candle2, candle3]
+    let iter = vec![candle1, candle2, candle3];
+    Arc::from_iter(iter)
 }
 
-fn get_short_data() -> Vec<Candle> {
+fn get_short_data() -> Arc<[Candle]> {
     let candle1 = CandleBuilder::builder()
         .open(150.0)
         .high(160.0)
@@ -86,10 +89,11 @@ fn get_short_data() -> Vec<Candle> {
         .build()
         .unwrap();
 
-    vec![candle1, candle2, candle3]
+    let iter = vec![candle1, candle2, candle3];
+    Arc::from_iter(iter)
 }
 
-fn get_long_data_trailing_stop() -> Vec<Candle> {
+fn get_long_data_trailing_stop() -> Arc<[Candle]> {
     let candle1 = CandleBuilder::builder()
         .open(99.0)
         .high(101.0)
@@ -131,10 +135,11 @@ fn get_long_data_trailing_stop() -> Vec<Candle> {
         .build()
         .unwrap();
 
-    vec![candle1, candle2, candle3, candle4]
+    let iter = vec![candle1, candle2, candle3, candle4];
+    Arc::from_iter(iter)
 }
 
-fn get_long_data_trailing_stop_loss() -> Vec<Candle> {
+fn get_long_data_trailing_stop_loss() -> Arc<[Candle]> {
     let candle1 = CandleBuilder::builder()
         .open(99.0)
         .high(100.0)
@@ -156,7 +161,8 @@ fn get_long_data_trailing_stop_loss() -> Vec<Candle> {
         .build()
         .unwrap();
 
-    vec![candle1, candle2]
+    let iter = vec![candle1, candle2];
+    Arc::from_iter(iter)
 }
 
 #[test]
@@ -172,7 +178,7 @@ fn scenario_place_and_delete_order_with_market_fees() {
     let _expected_total_cost = price + expected_fee; // 110 + 0.11 = 110.11
 
     let order = Order::from((OrderType::Market(price), 1.0, OrderSide::Buy));
-    bt.place_order(&candle, order.clone()).unwrap();
+    bt.place_order(&candle, order).unwrap();
 
     assert!(!bt.orders.is_empty());
     assert_eq!(bt.balance(), 1000.0);
@@ -293,7 +299,7 @@ fn scenario_place_and_delete_order() {
     let price = candle.close(); // 110
 
     let order = Order::from((OrderType::Market(price), 1.0, OrderSide::Buy));
-    bt.place_order(&candle, order.clone()).unwrap(); // lock amount 110
+    bt.place_order(&candle, order).unwrap(); // lock amount 110
 
     assert!(!bt.orders.is_empty());
     assert_eq!(bt.balance(), 1000.0);

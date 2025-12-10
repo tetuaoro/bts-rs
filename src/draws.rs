@@ -242,11 +242,10 @@ impl<'d> Draw<'d> {
         #[cfg(not(feature = "metrics"))]
         let (min_balance, max_balance) = (0.0, 0.0);
         #[cfg(feature = "metrics")]
-        let (min_balance, max_balance) = {
-            let min = balances.iter().map(|(_, b)| *b).fold(f64::INFINITY, f64::min);
-            let max = balances.iter().map(|(_, b)| *b).fold(f64::NEG_INFINITY, f64::max);
-            (min, max)
-        };
+        let (min_balance, max_balance) = (
+            balances.iter().map(|(_, b)| *b).fold(f64::INFINITY, f64::min),
+            balances.iter().map(|(_, b)| *b).fold(f64::NEG_INFINITY, f64::max),
+        );
 
         let (top, bottom) = if self.options.show_volume { (0, 0) } else { (10, 10) };
         let drawing_area = drawing_area.margin(top, bottom, 70, 70);
@@ -330,14 +329,14 @@ impl<'d> Draw<'d> {
                     Event::AddPosition(date_time, position) => Some((date_time, position.entry_price())),
                     _ => None,
                 })
-                .map(|(datetime, price)| Circle::new((*datetime, price.unwrap().addpercent(5.0)), 2, BLUE.filled()));
+                .map(|(datetime, price)| Circle::new((*datetime, price.expect("Invalid price").addpercent(5.0)), 2, BLUE.filled()));
             let closed_positions = backtest
                 .events()
                 .filter_map(|e| match e {
                     Event::DelPosition(date_time, position) => Some((date_time, position.entry_price())),
                     _ => None,
                 })
-                .map(|(datetime, price)| Circle::new((*datetime, price.unwrap().addpercent(5.0)), 2, RED.filled()));
+                .map(|(datetime, price)| Circle::new((*datetime, price.expect("Invalid price").addpercent(5.0)), 2, RED.filled()));
 
             chart
                 .draw_series(opened_positions)

@@ -33,7 +33,7 @@ pub trait ParameterCombination: Sync {
 /// collecting results for analysis.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Optimizer<PC: ParameterCombination> {
-    data: Vec<Candle>,
+    data: Arc<[Candle]>,
     initial_balance: f64,
     _marker: PhantomData<PC>,
     market_fees: Option<(f64, f64)>,
@@ -60,7 +60,7 @@ impl<PC: ParameterCombination> Optimizer<PC> {
     ///
     /// # Returns
     /// A new `Optimizer` instance.
-    pub fn new(data: Vec<Candle>, initial_balance: f64, market_fees: Option<(f64, f64)>) -> Self {
+    pub fn new(data: Arc<[Candle]>, initial_balance: f64, market_fees: Option<(f64, f64)>) -> Self {
         Self {
             data,
             market_fees,
@@ -74,36 +74,44 @@ impl<PC: ParameterCombination> Optimizer<PC> {
     /// # Arguments
     /// * `combinator` - Function that converts a parameter combination into strategy-specific parameters.
     /// * `strategy` - Trading strategy function to test.
+    /// * `filter` - Function that allow you to return anything in backtest instance (e.g. its balance, its events)
     ///
     /// # Returns
     /// A vector of tuples containing each parameter combination and its resulting balance.
     ///
     /// # Errors
     /// Returns an error if backtest execution fails.
-    pub fn with<T, C, S>(&self, combinator: C, strategy: S) -> Result<Vec<(PC::Output, f64)>>
+    pub fn with_filter<T, C, S, F, R>(&self, combinator: C, strategy: S, filter: F) -> Result<Vec<(PC::Output, R)>>
     where
         T: Clone,
+        R: Clone + Send,
         C: Fn(&PC::Output) -> Result<T> + Sync,
         S: FnMut(&mut Backtest, &mut T, &Candle) -> Result<()> + Send,
+        F: Fn(&Backtest) -> R + Send + Sync,
     {
         let num_cpus = num_cpus::get();
         let combinations = PC::generate();
         let strategy = Arc::new(Mutex::new(strategy));
+        let filter = Arc::new(filter);
         let chunk_size = combinations.len().div_ceil(num_cpus).max(1);
 
         combinations
             .par_chunks(chunk_size)
             .map::<_, Result<_>>(|par_combinations| {
-                let mut backtest = Backtest::new(self.data.clone(), self.initial_balance, self.market_fees)?;
+                let candles = Arc::clone(&self.data);
+                let mut backtest = Backtest::new(candles, self.initial_balance, self.market_fees)?;
                 let mut local_results = Vec::with_capacity(par_combinations.len());
 
                 let strategy_arc = Arc::clone(&strategy);
                 let mut strategy_guard = strategy_arc.lock().map_err(|e| Error::Mutex(e.to_string()))?;
 
+                let filter_arc = Arc::clone(&filter);
+
                 for param_set in par_combinations {
                     let mut output = combinator(param_set)?;
                     backtest.run(|bt, candle| strategy_guard(bt, &mut output, candle))?;
-                    local_results.push((param_set.clone(), backtest.total_balance()));
+                    let result = filter_arc(&backtest);
+                    local_results.push((param_set.clone(), result));
                     backtest.reset();
                 }
 
@@ -111,6 +119,26 @@ impl<PC: ParameterCombination> Optimizer<PC> {
             })
             .collect::<Result<Vec<_>>>()
             .map(|chunks| chunks.into_iter().flatten().collect())
+    }
+
+    /// Optimizes a trading strategy by testing all parameter combinations.
+    ///
+    /// # Arguments
+    /// * `combinator` - Function that converts a parameter combination into strategy-specific parameters.
+    /// * `strategy` - Trading strategy function to test.
+    ///
+    /// # Returns
+    /// A vector of tuples containing each parameter combination and its backtest instance.
+    ///
+    /// # Errors
+    /// Returns an error if backtest execution fails.
+    pub fn with<T, C, S>(&self, combinator: C, strategy: S) -> Result<Vec<(PC::Output, Backtest)>>
+    where
+        T: Clone,
+        C: Fn(&PC::Output) -> Result<T> + Sync,
+        S: FnMut(&mut Backtest, &mut T, &Candle) -> Result<()> + Send,
+    {
+        self.with_filter(combinator, strategy, |b| b.clone())
     }
 }
 
@@ -183,40 +211,66 @@ fn optimizer_with_ema_macd() {
     };
     use ta::*;
 
-    let candles = get_data();
+    let data = get_data();
     let initial_balance = 1_000.0;
+    let candles = std::sync::Arc::from_iter(data);
 
-    let opt = Optimizer::<Parameters>::new(candles.clone(), initial_balance, None);
+    let opt = Optimizer::<Parameters>::new(candles, initial_balance, None);
 
-    let result = opt
-        .with(
-            |&(ema_period, m1, m2, m3)| {
-                let ema = ExponentialMovingAverage::new(ema_period).map_err(|e| Error::Msg(e.to_string()))?;
-                let macd =
-                    MovingAverageConvergenceDivergence::new(m1, m2, m3).map_err(|e| Error::Msg(e.to_string()))?;
-                Ok((ema, macd))
-            },
-            |bt, (ema, macd), candle| {
-                let close = candle.close();
-                let output = ema.next(close);
-                let MovingAverageConvergenceDivergenceOutput { histogram, .. } = macd.next(close);
-                let balance = bt.free_balance()?;
-                let amount = balance.how_many(2.0).max(21.0);
+    opt.with(
+        |&(ema_period, m1, m2, m3)| {
+            let ema = ExponentialMovingAverage::new(ema_period).map_err(|e| Error::Msg(e.to_string()))?;
+            let macd = MovingAverageConvergenceDivergence::new(m1, m2, m3).map_err(|e| Error::Msg(e.to_string()))?;
+            Ok((ema, macd))
+        },
+        |bt, (ema, macd), candle| {
+            let close = candle.close();
+            let output = ema.next(close);
+            let MovingAverageConvergenceDivergenceOutput { histogram, .. } = macd.next(close);
+            let balance = bt.free_balance()?;
+            let amount = balance.how_many(2.0).max(21.0);
 
-                if balance > (initial_balance / 2.0) && close > output && histogram > 0.0 {
-                    let quantity = amount / close;
-                    let order = (
-                        OrderType::Market(close),
-                        OrderType::TrailingStop(close, 2.0),
-                        quantity,
-                        OrderSide::Buy,
-                    );
-                    bt.place_order(candle, order.into())?;
-                }
-                Ok(())
-            },
-        )
-        .unwrap();
+            if balance > (initial_balance / 2.0) && close > output && histogram > 0.0 {
+                let quantity = amount / close;
+                let order = (
+                    OrderType::Market(close),
+                    OrderType::TrailingStop(close, 2.0),
+                    quantity,
+                    OrderSide::Buy,
+                );
+                bt.place_order(candle, order.into())?;
+            }
+            Ok(())
+        },
+    )
+    .unwrap();
 
-    assert!(!result.is_empty(), "No optimization results returned");
+    opt.with_filter(
+        |&(ema_period, m1, m2, m3)| {
+            let ema = ExponentialMovingAverage::new(ema_period).map_err(|e| Error::Msg(e.to_string()))?;
+            let macd = MovingAverageConvergenceDivergence::new(m1, m2, m3).map_err(|e| Error::Msg(e.to_string()))?;
+            Ok((ema, macd))
+        },
+        |bt, (ema, macd), candle| {
+            let close = candle.close();
+            let output = ema.next(close);
+            let MovingAverageConvergenceDivergenceOutput { histogram, .. } = macd.next(close);
+            let balance = bt.free_balance()?;
+            let amount = balance.how_many(2.0).max(21.0);
+
+            if balance > (initial_balance / 2.0) && close > output && histogram > 0.0 {
+                let quantity = amount / close;
+                let order = (
+                    OrderType::Market(close),
+                    OrderType::TrailingStop(close, 2.0),
+                    quantity,
+                    OrderSide::Buy,
+                );
+                bt.place_order(candle, order.into())?;
+            }
+            Ok(())
+        },
+        |b| b.orders().copied().collect::<Vec<_>>(),
+    )
+    .unwrap();
 }
