@@ -1,36 +1,19 @@
 //! # EMA Parameter Optimization
 //!
-//! This module implements a **brute-force optimization** to find the optimal EMA (Exponential Moving Average)
+//! This module implements an **optimization** to find the optimal EMA (Exponential Moving Average)
 //! period for a trading strategy. It tests a range of EMA periods (from 3 to 200) and evaluates which
 //! period yields the highest final balance when used in a trend-following strategy.
-//!
-//! ## Strategy Logic
-//! - Uses a **trend-following approach**: Buy when price closes above the EMA
-//! - Implements **risk management**: Maximum 2% of capital per trade, minimum trade size of 21 units
-//! - Uses **stop loss**: 2% to protect profits and limit losses
-//! - Only trades when account balance is above 50% of initial capital (risk control)
-//!
-//! ## Optimization Process
-//! 1. Iterates through EMA periods from 3 to 200
-//! 2. For each period:
-//!    - Resets the backtest to initial state
-//!    - Runs the strategy with the current EMA period
-//!    - Records the final balance
-//! 3. Sorts results by final balance (descending order)
-//! 4. Outputs:
-//!    - Top performing periods (successful backtests)
-//!    - Error cases (failed backtests)
-
 mod utils;
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::Arc};
 
 use bts_rs::prelude::*;
 use ta::{indicators::*, *};
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let candles = utils::example_candles();
+    let data = utils::example_candles();
     let initial_balance = 1_000.0;
+    let candles = Arc::from_iter(data);
     let mut bts = Backtest::new(candles.clone(), initial_balance, None)?;
 
     let mut total_balances = vec![];

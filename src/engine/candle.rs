@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 /// closing price, trading volume, and bid/ask spread information.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(test, derive(PartialEq))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Candle {
     open: f64,
     high: f64,

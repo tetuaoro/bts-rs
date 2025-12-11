@@ -2,6 +2,7 @@ use crate::errors::{Error, Result};
 
 /// Represents a trading wallet with balance and locked funds management.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Copy)]
 pub struct Wallet {
     // Initial balance used for reset
     initial_balance: f64,

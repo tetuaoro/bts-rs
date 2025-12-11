@@ -12,18 +12,19 @@
 - [x] Parameters optimization
 - [x] Strategy examples (5+ templates)
 - [x] WASM compilation support
+- [x] Automated report generation (SVG/PNG)
+- [x] Optimize (use Arc<[Candle]>, impl Copy trait) and remove unwrap and clone (partial)
+- [x] Write better docs, examples ~~and tests~~
 
 ## 📌 In Progress
-~~- [ ] Add methods to modify orders/positions (update SL/TP/trailing stop)~~
-~~- [ ] Multi-strategy parallel execution~~
-- [ ] Automated report generation (PDF/HTML)
-- [ ] Tracing and Progress when running strategy
 
 ## 🚀 Road to v1.0.0
-- [ ] Optimize by remove unwrap and clone
-- [ ] Write better docs, examples and tests
 
 ### Core Features
 
 ### Advanced Features
+- [ ] Multi-strategy parallel execution
+- [ ] Automated report generation (CONSOLE/HTML)
 - [ ] Web/Desktop App dashboard integration
+- [ ] Tracing and Progress when running strategy
+- [ ] Add methods to modify orders/positions (update SL/TP/trailing stop)

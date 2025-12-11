@@ -4,28 +4,33 @@
 It enables testing technical indicators, custom strategies, and simulating trading performance
 on historical or generated data.
 
-## **Key Features**
+## **🔑 Key Features**
 
-- **Technical Indicators**: Uses with popular indicators (Impulse MACD, Parabolic SAR, VWAP, etc.) and allows easy addition of new ones.
-- **Backtesting**: Simulates trading strategies on historical or generated data.
-- **Market Engine**: Processes candles one by one to test strategies under realistic conditions.
-- **Performance Metrics**: Calculates P&L (Profit & Loss), drawdown, Sharpe ratio, and more.
-- **Flexibility**: Compatible with indicators crates for seamless integration.
-- **Order & Position Management**: Supports market orders, limit orders, take-profit,
+- **📊 Technical Indicators**: Uses with popular indicators (Impulse MACD, Parabolic SAR, VWAP, etc.) and allows easy addition of new ones.
+- **📈 Backtesting**: Simulates trading strategies on historical or generated data.
+- **🏗️ Market Engine**: Processes candles one by one to test strategies under realistic conditions.
+- **📉 Performance Metrics**: Calculates P&L (Profit & Loss), drawdown, Sharpe ratio, and more.
+- **🔧 Flexibility**: Compatible with indicators crates for seamless integration.
+- **📝 Order & Position Management**: Supports market orders, limit orders, take-profit,
   stop-loss, and trailing stops.
 
-## **Usage Example**
+## **🚀 Usage Example**
 ```rust
+use std::sync::Arc;
+
 use bts_rs::prelude::*;
+use chrono::{DateTime, Duration};
 
 // Candlestick data
 let data = vec![
-    CandleBuilder::builder().open(100.0).high(110.0).low(95.0).close(105.0).volume(1000.0).build().unwrap(),
-    CandleBuilder::builder().open(105.0).high(115.0).low(100.0).close(110.0).volume(1000.0).build().unwrap(),
+    CandleBuilder::builder().open(100.0).high(110.0).low(95.0).close(105.0).open_time(DateTime::default()).close_time(DateTime::default() + Duration::days(1)).volume(1000.0).build().unwrap(),
+    CandleBuilder::builder().open(105.0).high(115.0).low(100.0).close(110.0).open_time(DateTime::default()).close_time(DateTime::default() + Duration::days(1)).volume(1000.0).build().unwrap(),
 ];
 
+let candles = Arc::from_iter(data);
+
 // Initialize backtest
-let mut bts = Backtest::new(data, 1000.0, None).unwrap();
+let mut bts = Backtest::new(candles, 1000.0, None).unwrap();
 
 // Custom strategy
 bts.run(|bt, candle| {
@@ -45,19 +50,21 @@ println!("Number of events: {}", bts.events().count());
 
 See more examples in [examples](examples) folder.
 
-## **Performance Metrics**
+## **📊 Performance Metrics**
 
 The backtesting engine automatically calculates the following metrics:
-- **Profit & Loss (P&L)**: Total profits or losses.
-- **Drawdown**: Maximum capital decline.
-- **Sharpe Ratio**: Risk-adjusted return measure.
-- **Win Rate**: Percentage of winning trades.
+| Metrics                 | Description                            |
+|-------------------------|----------------------------------------|
+| **Drawdown**            | Maximum capital decline                |
+| **Profit Factor**       | Ratio of gross profits to gross losses |
+| **Sharpe Ratio**        | Risk-adjusted return measure           |
+| **Win Rate**            | Percentage of winning trades           |
 
-## **Integration with Other Crates**
+## **🔗 Integration with Other Crates**
 
 BTS is compatible with popular indicators crates for technical analysis, allowing you to easily integrate your trading strategy.
 
-## **Advanced Features**
+## **⚡ Advanced Features**
 
 - **Custom Strategies**: Implement your own trading logic.
 - **Event Tracking**: Detailed logging of all trading events.
@@ -66,16 +73,22 @@ BTS is compatible with popular indicators crates for technical analysis, allowin
 - **Parameters Optimization**: Computes the best parameters *(indicators, RR, etc...)* for your strategy.
 - **Draw chart and metrics**: Draws the candlesticks data, balance, positions and metrics.
 
-## **Error Handling**
+## **⚠️ Error Handling**
 
 BTS provides comprehensive error handling for:
 - Insufficient funds
 - Invalid orders/positions
 - Market data errors
-- Configuration issues
-and more.
+- Configuration issues and more.
 
-## **Getting Started**
+## **📦 Crate Features**
+
+The crate includes three main optional features to extend its functionality:
+- `metrics`: Exposes the Metrics struct, enabling calculations of key performance indicators such as max drawdown, Sharpe ratio, profit factor, and win rate.
+- `optimizer`: Provides tools for parameter optimization, allowing you to find the best strategy parameters (e.g., indicator periods, risk-reward ratios) by testing combinations across historical data.
+- `draws`: Enables integration with the plotters crate to visualize backtest results, including candlestick charts or performance metrics *(requires the `metrics` feature to be enabled)*.
+
+## **🛠️ Getting Started**
 
 Add BTS to your `Cargo.toml`:
 ```toml
@@ -88,11 +101,11 @@ Then import and use it in your project:
 use bts_rs::prelude::*;
 ```
 
-## Contributing
+## **🤝 Contributing**
 
 Contributions are welcome! See [Contributing](CONTRIBUTING.md) file to contribute to this project.
 
-## **License**
+## **📄 License**
 
 This project is licensed under the [MIT License](LICENSE).
 
