@@ -17,27 +17,15 @@ jobs:
 
     - name: Simple check
       run: cargo check --verbose
-    - name: Check feature metrics
-      run: cargo check --features metrics --verbose
-    - name: Check feature optimizer
-      run: cargo check --features optimizer --verbose
-
     - name: Install font for draws feature
       run: sudo apt install -y libfontconfig1-dev
-
-    - name: Check feature draws
-      run: cargo check --features draws --verbose
-    - name: Check feature draws and metrics
-      run: cargo check --features draws,metrics --verbose
-
+    - name: Check features
+      run: cargo check --all-features --verbose
 
     - name: Run simple test
       run: cargo test --verbose
-    - name: Test feature metrics
-      run: cargo test --features metrics --verbose
-    - name: Test feature optimizer
-      run: cargo test --features optimizer --verbose
-    - name: Test feature draws
-      run: cargo test --features draws --verbose
-    - name: Test feature draws and metrics
-      run: cargo test --features draws,metrics --verbose
+    - name: Test features
+      run: cargo test --all-features --verbose
+
+    - name: Check examples
+      run: cargo check --examples --all-features --verbose

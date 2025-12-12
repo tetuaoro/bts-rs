@@ -3,7 +3,7 @@
 //! This module provides tools to optimize trading strategies by testing different parameter combinations.
 //! The `Optimizer` struct handles the execution of backtests for each combination, while the
 //! `ParameterCombination` trait defines how to generate parameter sets.
-//! 
+//!
 //! It needs to enable `optimizer` feature to use it. Take a look at [parallelize parameters optimization](https://github.com/raonagos/bts-rs/blob/master/examples/par_parameters_optimization.rs) for example.
 
 use std::marker::PhantomData;
@@ -76,7 +76,7 @@ impl<PC: ParameterCombination> Optimizer<PC> {
     /// # Arguments
     /// * `combinator` - A function that converts a parameter combination into strategy-specific parameters.
     /// * `strategy` - A trading strategy function to test.
-    /// * `filter` - A function that takes a reference to a `Backtest` instance after strategy execution and returns an `Option<R>`.
+    /// * `filter` - A function that takes a reference to a `Backtest` instance after strategy execution and returns an `Option<R>`. The function returns only the `Some` result.
     ///
     /// # Returns
     /// A vector of tuples where each tuple contains:
@@ -85,6 +85,13 @@ impl<PC: ParameterCombination> Optimizer<PC> {
     ///
     /// # Errors
     /// Returns an error if backtest execution fails.
+    ///
+    /// # Performance Note
+    /// This function uses `Mutex` to ensure thread safety when modifying shared state.
+    /// In some cases, this may result in slower performance compared to a sequential `for` loop,
+    /// especially if the `strategy` function is called frequently or if contention on the `Mutex` is high.
+    ///
+    /// For stateless strategies, consider using an alternative approach without it for better performance.
     pub fn with_filter<T, R, C, S, F>(&self, combinator: C, strategy: S, filter: F) -> Result<Vec<(PC::Output, R)>>
     where
         T: Clone,
@@ -127,24 +134,31 @@ impl<PC: ParameterCombination> Optimizer<PC> {
             .map(|chunks| chunks.into_iter().flatten().collect())
     }
 
-    /// Optimizes a trading strategy by testing all parameter combinations.
+    /// Optimizes a trading strategy by testing all possible parameter combinations.
     ///
     /// # Arguments
     /// * `combinator` - Function that converts a parameter combination into strategy-specific parameters.
     /// * `strategy` - Trading strategy function to test.
     ///
     /// # Returns
-    /// A vector of tuples containing each parameter combination and its backtest instance.
+    /// A vector of tuples containing each parameter combination and the `Backtest` instance.
     ///
     /// # Errors
     /// Returns an error if backtest execution fails.
+    ///
+    /// # Performance Note
+    /// This function uses `Mutex` to ensure thread safety when modifying shared state.
+    /// In some cases, this may result in slower performance compared to a sequential `for` loop,
+    /// especially if the `strategy` function is called frequently or if contention on the `Mutex` is high.
+    ///
+    /// For stateless strategies, consider using an alternative approach without it for better performance.
     pub fn with<T, C, S>(&self, combinator: C, strategy: S) -> Result<Vec<(PC::Output, Backtest)>>
     where
         T: Clone,
         C: Fn(&PC::Output) -> Result<T> + Sync,
         S: FnMut(&mut Backtest, &mut T, &Candle) -> Result<()> + Send,
     {
-        self.with_filter(combinator, strategy, |b| Some(b.clone()))
+        self.with_filter(combinator, strategy, |backtest| Some(backtest.clone()))
     }
 }
 

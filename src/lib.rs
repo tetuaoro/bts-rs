@@ -205,9 +205,8 @@ pub mod draws;
 
 /// Re-exports of commonly used types and traits for convenience.
 pub mod prelude {
-    pub use super::*;
+    pub use super::PercentCalculus;
     pub use crate::engine::*;
-    pub use crate::errors::*;
 
     #[cfg(feature = "metrics")]
     pub use crate::metrics::*;
