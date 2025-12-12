@@ -5,12 +5,12 @@
 //! period yields the highest final balance when used in a trend-following strategy.
 mod utils;
 
-use std::{cmp::Ordering, sync::Arc};
+use std::{cmp::Ordering, error::Error, sync::Arc};
 
 use bts_rs::prelude::*;
 use ta::{indicators::*, *};
 
-fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let data = utils::example_candles();
     let initial_balance = 1_000.0;
     let candles = Arc::from_iter(data);

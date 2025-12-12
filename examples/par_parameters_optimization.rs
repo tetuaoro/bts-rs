@@ -4,8 +4,9 @@
 //! EMA and MACD parameters for trading strategies using multi-threading.
 mod utils;
 
-use std::sync::Arc;
+use std::{error::Error as StdError, sync::Arc};
 
+use bts_rs::errors::Error;
 use bts_rs::prelude::*;
 use ta::{indicators::*, *};
 
@@ -31,7 +32,7 @@ impl ParameterCombination for Parameters {
     }
 }
 
-fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn StdError>> {
     let data = utils::example_candles();
     let initial_balance = 1_000.0;
     let candles = Arc::from_iter(data);

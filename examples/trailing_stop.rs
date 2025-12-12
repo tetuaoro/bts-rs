@@ -4,12 +4,12 @@
 //! developed by Richard Dennis, which uses trend-following techniques with strict risk management.
 mod utils;
 
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 use bts_rs::prelude::*;
 use ta::{indicators::*, *};
 
-fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let data = utils::example_candles();
     let initial_balance = 1_000.0;
     let candles = Arc::from_iter(data);

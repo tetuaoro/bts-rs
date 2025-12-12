@@ -1,6 +1,8 @@
 //! Module for visualizing backtest results and candle charts.
 //!
 //! It needs to enable `draws` feature to use it. Take a look at [trailing stop](https://github.com/raonagos/bts-rs/blob/master/examples/trailing_stop.rs#L70) for example.
+#![allow(unused_variables)]
+#![allow(unused_mut)]
 
 use crate::engine::{Backtest, Candle};
 use crate::errors::{Error, Result};
