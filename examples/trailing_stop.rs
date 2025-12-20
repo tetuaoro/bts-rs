@@ -17,10 +17,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut ema = ExponentialMovingAverage::new(100)?;
     let mut macd = MovingAverageConvergenceDivergence::default();
 
+    #[cfg(feature = "draws")]
+    let mut ema_history = vec![];
+
     bts.run(|bt, candle| {
         let close = candle.close();
         let output = ema.next(close);
         let MovingAverageConvergenceDivergenceOutput { histogram, .. } = macd.next(close);
+
+        #[cfg(feature = "draws")]
+        ema_history.push(output);
 
         let balance = bt.free_balance()?;
         // 21: minimum to trade
@@ -75,7 +81,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             .show_volume(true);
         #[cfg(feature = "metrics")]
         let options = options.show_metrics(true);
-        let draw = Draw::from(&bts).with_options(options);
+        let draw = Draw::from(&bts)
+            .with_options(options)
+            .append_series(Series::Lines(ema_history));
         draw.plot()?;
     }
 

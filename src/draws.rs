@@ -8,14 +8,15 @@ use crate::errors::{Error, Result};
 use crate::metrics::{Event, Metrics};
 
 use charming::component::{Axis, DataZoom, DataZoomType, Grid, Title};
-use charming::element::{AxisLabel, Tooltip, Trigger};
-use charming::series::{Bar, Candlestick};
+use charming::element::{AxisLabel, ItemStyle, Symbol, Tooltip, Trigger};
+use charming::series::{Bar, Candlestick, Line, Scatter};
 use charming::{Chart, HtmlRenderer};
 use chrono::Duration;
 use plotters::backend::{BitMapBackend, DrawingBackend, SVGBackend};
 use plotters::coord::Shift;
 use plotters::prelude::*;
 use plotters::style::WHITE;
+use plotters::style::full_palette::{LIME, ORANGE, PINK, PURPLE, TEAL};
 
 /// Size of the X-axis.
 const WIDTH: u32 = 1280;
@@ -83,9 +84,34 @@ impl DrawOptions {
     }
 }
 
+/// Represents additional data series that can be plotted on a chart.
+///
+/// This enum is used to define custom visual elements (like technical indicators)
+/// that can be overlaid on top of candlestick charts. Each variant corresponds to
+/// a different type of visual representation:
+///
+/// - `Lines`: A continuous line series (e.g., RSI, MACD, moving averages)
+/// - `Circles`: Discrete points marked as circles (e.g., divergence points, signals)
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum Series {
+    /// A continuous line series.
+    ///
+    /// Each value in the vector corresponds to a y-value at the same index
+    /// as the candle in the chart's candle data. The x-coordinate is automatically
+    /// derived from the candle's timestamp.
+    Lines(Vec<f64>),
+    /// A series of discrete points marked as circles.
+    ///
+    /// Each value in the vector corresponds to a y-value at the same index
+    /// as the candle in the chart's candle data. The x-coordinate is automatically
+    /// derived from the candle's timestamp.
+    Circles(Vec<f64>),
+}
+
 /// Chart drawing utility for backtest visualization.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Draw {
+    series: Vec<Series>,
     candles: Vec<Candle>,
     #[cfg(feature = "metrics")]
     metrics: Metrics,
@@ -95,6 +121,7 @@ pub struct Draw {
 impl From<&Backtest> for Draw {
     fn from(value: &Backtest) -> Self {
         Self {
+            series: Vec::new(),
             options: DrawOptions::default(),
             #[cfg(feature = "metrics")]
             metrics: Metrics::from(value),
@@ -108,6 +135,7 @@ impl Draw {
     pub fn new(candles: Vec<Candle>, options: DrawOptions, #[cfg(feature = "metrics")] metrics: Metrics) -> Self {
         Self {
             candles,
+            series: Vec::new(),
             #[cfg(feature = "metrics")]
             metrics,
             options,
@@ -117,6 +145,20 @@ impl Draw {
     /// Sets the drawing options.
     pub fn with_options(mut self, options: DrawOptions) -> Self {
         self.options = options;
+        self
+    }
+
+    /// Adds an additional data series to be plotted on the chart.
+    ///
+    /// This method allows you to overlay custom visual elements (like technical indicators)
+    /// on top of the candlestick chart. The series will be drawn in the order they are added.
+    ///
+    /// ### Arguments
+    ///
+    /// * `series` - A `Series` enum variant containing the data to plot.
+    ///   Can be either `Series::Lines` for continuous data or `Series::Circles` for discrete points.
+    pub fn append_series(mut self, series: Series) -> Self {
+        self.series.push(series);
         self
     }
 
@@ -302,6 +344,33 @@ impl Draw {
             }))
             .map_err(|e| Error::Plotters(e.to_string()))?;
 
+        if !self.series.is_empty() {
+            let colors = [
+                BLUE, GREEN, RED, CYAN, MAGENTA, YELLOW, BLACK, ORANGE, PURPLE, PINK, LIME, TEAL,
+            ];
+            let mut color_index = 0;
+
+            self.series.iter().for_each(|s| {
+                let color = colors[color_index % colors.len()];
+                color_index += 1;
+
+                match s {
+                    Series::Lines(data) => {
+                        let lines =
+                            LineSeries::new(data.iter().zip(&self.candles).map(|(s, c)| (c.open_time(), *s)), color);
+                        chart.draw_series(lines).expect("Draw line series");
+                    }
+                    Series::Circles(data) => {
+                        let circles = data
+                            .iter()
+                            .zip(&self.candles)
+                            .map(|(s, c)| Circle::new((c.open_time(), *s), 2.0, color));
+                        chart.draw_series(circles).expect("Draw circle series");
+                    }
+                }
+            });
+        }
+
         #[cfg(feature = "metrics")]
         if self.options.show_metrics {
             use crate::PercentCalculus;
@@ -451,7 +520,7 @@ impl Draw {
         let max_value = self.candles.iter().map(|c| c.high()).fold(f64::NEG_INFINITY, f64::max);
         let title = self.options.title.as_deref().unwrap_or("BTS Chart");
 
-        Chart::new()
+        let mut chart = Chart::new()
             .title(Title::new().text(title).left("center"))
             .data_zoom(DataZoom::new().x_axis_index(vec![0, 1]).type_(DataZoomType::Slider))
             .grid(Grid::new().top("10%").height("50%"))
@@ -484,23 +553,63 @@ impl Draw {
                         })
                         .collect(),
                 ),
-            )
-            .grid(Grid::new().top("65%").height("10%"))
-            .x_axis(
-                Axis::new().grid_index(1).data(
-                    self.candles
-                        .iter()
-                        .map(|c| c.open_time().date_naive().to_string())
-                        .collect(),
-                ),
-            )
-            .y_axis(Axis::new().grid_index(1))
-            .series(
-                Bar::new()
-                    .x_axis_index(1)
-                    .y_axis_index(1)
-                    .data(self.candles.iter().map(|c| c.volume()).collect()),
-            )
-            .tooltip(Tooltip::new().trigger(Trigger::Axis))
+            );
+
+        if self.options.show_volume {
+            chart = chart
+                .grid(Grid::new().top("65%").height("10%"))
+                .x_axis(
+                    Axis::new().grid_index(1).data(
+                        self.candles
+                            .iter()
+                            .map(|c| c.open_time().date_naive().to_string())
+                            .collect(),
+                    ),
+                )
+                .y_axis(Axis::new().grid_index(1))
+                .series(
+                    Bar::new()
+                        .x_axis_index(1)
+                        .y_axis_index(1)
+                        .data(self.candles.iter().map(|c| c.volume()).collect()),
+                );
+        }
+
+        if !self.series.is_empty() {
+            let colors = [
+                "BLUE", "GREEN", "RED", "CYAN", "MAGENTA", "YELLOW", "BLACK", "ORANGE", "PURPLE", "PINK", "LIME",
+                "TEAL",
+            ];
+            let mut color_index = 0;
+
+            self.series.iter().for_each(|s| {
+                let color = colors[color_index % colors.len()];
+                color_index += 1;
+
+                match s {
+                    Series::Lines(data) => {
+                        let lines = Line::new()
+                            .x_axis_index(0)
+                            .y_axis_index(0)
+                            .data(data.to_vec())
+                            .item_style(ItemStyle::new().color(color));
+
+                        chart = chart.clone().series(lines);
+                    }
+                    Series::Circles(data) => {
+                        let circles = Scatter::new()
+                            .x_axis_index(0)
+                            .y_axis_index(0)
+                            .data(data.to_vec())
+                            .symbol(Symbol::Circle)
+                            .item_style(ItemStyle::new().color(color));
+
+                        chart = chart.clone().series(circles);
+                    }
+                }
+            });
+        }
+
+        chart.tooltip(Tooltip::new().trigger(Trigger::Axis))
     }
 }
