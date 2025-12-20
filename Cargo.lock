@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "bts-rs"
-version = "0.9.4"
+version = "1.0.0"
 dependencies = [
  "charming",
  "chrono",
