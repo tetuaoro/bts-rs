@@ -54,8 +54,8 @@
 //! ### 1. Add BTS to your project:
 //! ```toml
 //! [dependencies]
-//! bts_rs = "*"
-//! ta = "*"  # Optional: For technical analysis indicators
+//! bts_rs = "1.0.0"
+//! ta = "0.5.0"  # Optional: For technical analysis indicators
 //! ```
 //!
 //! ### 2. Run a Simple Backtest:
