@@ -79,10 +79,8 @@ fn main() -> Result<(), Box<dyn StdError>> {
 
     #[cfg(feature = "metrics")]
     {
-        use crate::utils::print_metrics;
-
         let metrics = Metrics::from(&bts);
-        print_metrics(&metrics, initial_balance);
+        println!("{metrics}");
     }
 
     #[cfg(feature = "draws")]

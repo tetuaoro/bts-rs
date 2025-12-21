@@ -1,7 +1,5 @@
 use bts_rs::PercentCalculus;
 use bts_rs::engine::{Candle, CandleBuilder};
-#[cfg(feature = "metrics")]
-use bts_rs::metrics::Metrics;
 use chrono::{Duration, Utc};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -42,32 +40,6 @@ pub fn generate_sample_candles(count: usize, seed: u64, base_price: f64) -> Vec<
 
 pub fn example_candles() -> Vec<Candle> {
     generate_sample_candles(3000, 42, 100.0)
-}
-
-/// Pretty print Metrics
-#[cfg(feature = "metrics")]
-#[allow(dead_code)]
-pub fn print_metrics(metrics: &Metrics, initial_balance: f64) {
-    println!("=== Backtest Metrics ===");
-    println!("Initial Balance: {:.2}", initial_balance);
-    println!("Final Balance: {:.2}", metrics.balance());
-    println!("Profit & Loss (P&L): {:.2}", metrics.pnl());
-    println!("Fees paid: {:.2}", metrics.fees());
-    println!();
-    println!("Max Drawdown: {:.2}%", metrics.max_drawdown());
-    println!("Profit Factor: {:.2}", metrics.profit_factor());
-    println!("Sharpe Ratio (risk-free rate = 2%): {:.2}", metrics.sharpe_ratio(0.02));
-    println!("Win Rate: {:.2}%", metrics.win_rate());
-}
-
-#[macro_export]
-/// Pause and resume when press any key.
-macro_rules! pause {
-    () => {
-        println!("[{}:{}] Pausing! Press enter to continue...", file!(), line!());
-        let mut buffer = String::new();
-        std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
-    };
 }
 
 #[allow(dead_code)]
