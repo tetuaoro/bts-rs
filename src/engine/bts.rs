@@ -105,6 +105,30 @@ impl Backtest {
     ///
     /// ### Returns
     /// The new backtest instance or an error.
+    ///
+    /// ### Example
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use bts_rs::prelude::*;
+    /// use chrono::{DateTime, Duration};
+    ///
+    /// let candle = CandleBuilder::builder()
+    ///     .open(100.0)
+    ///     .high(110.0)
+    ///     .low(95.0)
+    ///     .close(105.0)
+    ///     .volume(1.0)
+    ///     .bid(0.5)
+    ///     .open_time(DateTime::default())
+    ///     .close_time(DateTime::default() + Duration::days(1))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let bts = Backtest::new(Arc::from_iter(vec![candle]), 1000.0, None).unwrap();
+    /// // or with market fees (taker 3%, maker 1%)
+    /// let bts = Backtest::new(Arc::from_iter(vec![candle]), 1000.0, Some((3.0, 1.0))).unwrap();
+    /// ```
     pub fn new(data: Arc<[Candle]>, initial_balance: f64, market_fees: Option<(f64, f64)>) -> Result<Self> {
         if data.is_empty() {
             return Err(Error::CandleDataEmpty);
@@ -164,6 +188,30 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
+    ///
+    /// ### Example
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use bts_rs::prelude::*;
+    /// use chrono::{DateTime, Duration};
+    ///
+    /// let candle = CandleBuilder::builder()
+    ///     .open(100.0)
+    ///     .high(110.0)
+    ///     .low(95.0)
+    ///     .close(105.0)
+    ///     .volume(1.0)
+    ///     .bid(0.5)
+    ///     .open_time(DateTime::default())
+    ///     .close_time(DateTime::default() + Duration::days(1))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let mut bts = Backtest::new(Arc::from_iter(vec![candle]), 1000.0, None).unwrap();
+    /// let order = Order::from((OrderType::Limit(99.0), 1.0, OrderSide::Sell));
+    /// bts.place_order(&candle, order).unwrap();
+    /// ```
     pub fn place_order(&mut self, _candle: &Candle, order: Order) -> Result<()> {
         self.wallet.lock(order.cost()?)?;
         self.orders.push_back(order);
@@ -183,6 +231,32 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
+    ///
+    /// ### Example
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use bts_rs::prelude::*;
+    /// use chrono::{DateTime, Duration};
+    ///
+    /// let candle = CandleBuilder::builder()
+    ///     .open(100.0)
+    ///     .high(110.0)
+    ///     .low(95.0)
+    ///     .close(105.0)
+    ///     .volume(1.0)
+    ///     .bid(0.5)
+    ///     .open_time(DateTime::default())
+    ///     .close_time(DateTime::default() + Duration::days(1))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let mut bts = Backtest::new(Arc::from_iter(vec![candle]), 1000.0, None).unwrap();
+    /// let order = Order::from((OrderType::Limit(99.0), 1.0, OrderSide::Sell));
+    /// bts.place_order(&candle, order).unwrap();
+    /// // if you call this function, always put `true` to delete
+    /// bts.delete_order(&candle, &order, true).unwrap();
+    /// ```
     pub fn delete_order(&mut self, _candle: &Candle, order: &Order, force_remove: bool) -> Result<()> {
         if force_remove {
             let order_idx = self
@@ -231,6 +305,40 @@ impl Backtest {
     ///
     /// ### Returns
     /// The profit/loss from closing the position, or an error.
+    ///
+    /// ### Example
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use bts_rs::prelude::*;
+    /// use chrono::{DateTime, Duration};
+    ///
+    /// let candle = CandleBuilder::builder()
+    ///     .open(100.0)
+    ///     .high(110.0)
+    ///     .low(95.0)
+    ///     .close(105.0)
+    ///     .volume(1.0)
+    ///     .bid(0.5)
+    ///     .open_time(DateTime::default())
+    ///     .close_time(DateTime::default() + Duration::days(1))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let mut bts = Backtest::new(Arc::from_iter(vec![candle]), 1000.0, None).unwrap();
+    /// bts.run(|_bts, candle| {
+    ///   let order = Order::from((OrderType::Limit(99.0), 1.0, OrderSide::Sell));
+    ///   _bts.place_order(&candle, order).unwrap();
+    ///   
+    ///   let last_position = _bts.positions().last().cloned();
+    ///   if let Some(position) = last_position {
+    ///     // if you call this function, always put `true` to delete
+    ///     _bts.close_position(candle, &position, 110.0, true).unwrap();
+    ///   }
+    ///
+    ///   Ok(())
+    /// }).unwrap();
+    /// ```
     pub fn close_position(
         &mut self,
         _candle: &Candle,
@@ -279,6 +387,29 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
+    ///
+    /// ### Example
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use bts_rs::prelude::*;
+    /// use chrono::{DateTime, Duration};
+    ///
+    /// let candle = CandleBuilder::builder()
+    ///     .open(100.0)
+    ///     .high(110.0)
+    ///     .low(95.0)
+    ///     .close(105.0)
+    ///     .volume(1.0)
+    ///     .bid(0.5)
+    ///     .open_time(DateTime::default())
+    ///     .close_time(DateTime::default() + Duration::days(1))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let mut bts = Backtest::new(Arc::from_iter(vec![candle]), 1000.0, None).unwrap();
+    /// bts.close_all_positions(&candle, 110.0).unwrap();
+    /// ```
     pub fn close_all_positions(&mut self, candle: &Candle, exit_price: f64) -> Result<()> {
         while let Some(position) = self.positions.pop_front() {
             self.close_position(candle, &position, exit_price, false)?;
@@ -317,7 +448,7 @@ impl Backtest {
                         return Err(Error::NegTakeProfitAndStopLoss);
                     }
 
-                    match position.side {
+                    match position.side() {
                         PositionSide::Long => {
                             if *take_profit > 0.0 && take_profit <= &candle.high() {
                                 Some(*take_profit)
@@ -343,7 +474,7 @@ impl Backtest {
                         return Err(Error::NegZeroTrailingStop);
                     }
 
-                    match position.side {
+                    match position.side() {
                         PositionSide::Long => {
                             let execute_price = price.subpercent(*percent);
                             if execute_price >= candle.low() {
@@ -402,17 +533,38 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
+    ///
+    /// ### Example
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use bts_rs::prelude::*;
+    /// use chrono::{DateTime, Duration};
+    ///
+    /// let candle = CandleBuilder::builder()
+    ///     .open(100.0)
+    ///     .high(110.0)
+    ///     .low(95.0)
+    ///     .close(105.0)
+    ///     .volume(1.0)
+    ///     .bid(0.5)
+    ///     .open_time(DateTime::default())
+    ///     .close_time(DateTime::default() + Duration::days(1))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let mut bts = Backtest::new(Arc::from_iter(vec![candle]), 1000.0, None).unwrap();
+    /// bts.run(|_bts, candle| {
+    ///   let order = Order::from((OrderType::Limit(99.0), 1.0, OrderSide::Sell));
+    ///   _bts.place_order(&candle, order)
+    /// }).unwrap();
+    /// ```
     pub fn run<S>(&mut self, mut strategy: S) -> Result<()>
     where
         S: FnMut(&mut Self, &Candle) -> Result<()>,
     {
         let candles = Arc::clone(&self.data);
         for candle in candles.iter() {
-            #[cfg(feature = "metrics")]
-            {
-                let open_time = candle.open_time();
-                self.events.push(Event::from((open_time, &self.wallet)));
-            }
             strategy(self, candle)?;
             self.execute_orders(candle)?;
             self.execute_positions(candle)?;
@@ -431,6 +583,40 @@ impl Backtest {
     ///
     /// ### Returns
     /// Ok if successful, or an error.
+    ///
+    /// ### Example
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use bts_rs::prelude::*;
+    /// use chrono::{DateTime, Duration};
+    ///
+    /// let candle = CandleBuilder::builder()
+    ///     .open(100.0)
+    ///     .high(110.0)
+    ///     .low(95.0)
+    ///     .close(105.0)
+    ///     .volume(1.0)
+    ///     .bid(0.5)
+    ///     .open_time(DateTime::default())
+    ///     .close_time(DateTime::default() + Duration::days(1))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// struct Aggregator;
+    /// impl Aggregation for Aggregator {
+    ///   fn factors(&self) -> &[usize] {
+    ///     // return (1) the normal candle
+    ///     &[1]
+    ///   }
+    /// }
+    ///
+    /// let mut bts = Backtest::new(Arc::from_iter(vec![candle]), 1000.0, None).unwrap();
+    /// bts.run_with_aggregator(&Aggregator, |_bts, candles| {
+    ///   let _candle = candles.last().unwrap();
+    ///   Ok(())
+    /// }).unwrap();
+    /// ```
     pub fn run_with_aggregator<A, S>(&mut self, aggregator: &A, mut strategy: S) -> Result<()>
     where
         A: Aggregation,
@@ -470,11 +656,6 @@ impl Backtest {
             }
 
             let agg_candles = aggregated_candles_map.values().flatten().collect();
-            #[cfg(feature = "metrics")]
-            {
-                let open_time = candle.open_time();
-                self.events.push(Event::from((open_time, &self.wallet)));
-            }
             strategy(self, agg_candles)?;
             self.execute_orders(candle)?;
             self.execute_positions(candle)?;

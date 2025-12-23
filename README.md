@@ -1,4 +1,14 @@
+<p align="center">
+  <img src="logo.png" alt="BTS-RS Logo" width="200"/>
+</p>
+
 # BTS: BackTest Strategy
+
+[![Crates.io](https://img.shields.io/crates/v/bts-rs.svg)](https://crates.io/crates/bts-rs)
+[![Documentation](https://img.shields.io/docsrs/bts-rs)](https://docs.rs/bts-rs)
+[![CI Status](https://github.com/raonagos/bts-rs/actions/workflows/rust.yml/badge.svg?style=flat-square)](https://github.com/raonagos/bts-rs/actions)
+[![License](https://img.shields.io/crates/l/bts-rs?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Downloads](https://img.shields.io/crates/d/bts-rs?style=flat-square&logo=rust)](https://crates.io/crates/bts-rs)
 
 **BTS** is a Rust library designed for backtesting trading strategies on candlestick data.
 It enables testing technical indicators, custom strategies, and simulating trading performance
@@ -93,7 +103,7 @@ The crate includes three main optional features to extend its functionality:
 Add BTS to your `Cargo.toml`:
 ```toml
 [dependencies]
-bts_rs = "1.0.0"
+bts_rs = "1.0.1"
 ```
 
 Then import and use it in your project:
