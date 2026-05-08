@@ -61,7 +61,7 @@
 //! ### 2. Run a Simple Backtest:
 //! ```rust
 //! use std::sync::Arc;
-//! 
+//!
 //! use bts_rs::prelude::*;
 //! use chrono::{DateTime, Duration};
 //!
@@ -109,7 +109,7 @@
 //! Final Balance: 10018.00
 //! Profit & Loss (P&L): 0.00
 //! Fees paid: 0.00
-//! 
+//!
 //! Max Drawdown: 0.20%
 //! Profit Factor: 2.00
 //! Sharpe Ratio: 1.50
@@ -141,7 +141,7 @@
 //! Example:
 //! ```rust
 //! use std::sync::Arc;
-//! 
+//!
 //! use bts_rs::prelude::*;
 //! use chrono::{DateTime, Duration};
 //!
@@ -156,10 +156,10 @@
 //!     .close_time(DateTime::default() + Duration::days(1))
 //!     .build()
 //!     .unwrap();
-//! 
+//!
 //! // Initialize backtest with \$10,000
 //! let mut backtest = Backtest::new(Arc::from_iter(vec![candle]), 10_000.0, None).unwrap();
-//! 
+//!
 //! // Execute a market buy order
 //! backtest
 //!     .run(|bt, candle| {
@@ -180,6 +180,7 @@
 //! ## License
 //!
 //! The project is licensed under the [`MIT`](https://github.com/raonagos/bts-rs/blob/master/LICENSE).
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
 /// Core trading engine components: orders, positions, wallet, and backtest logic.
@@ -193,14 +194,17 @@ mod utils;
 
 /// Performance metrics: drawdown, Sharpe ratio, win rate, etc.
 #[cfg(feature = "metrics")]
+#[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
 pub mod metrics;
 
 /// Strategy parameter optimization.
 #[cfg(feature = "optimizer")]
+#[cfg_attr(docsrs, doc(cfg(feature = "optimizer")))]
 pub mod optimizer;
 
 /// Module for visualizing backtest results and candle charts.
 #[cfg(feature = "draws")]
+#[cfg_attr(docsrs, doc(cfg(feature = "draws")))]
 pub mod draws;
 
 /// Re-exports of commonly used types and traits for convenience.
@@ -209,12 +213,15 @@ pub mod prelude {
     pub use crate::engine::*;
 
     #[cfg(feature = "metrics")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
     pub use crate::metrics::*;
 
     #[cfg(feature = "optimizer")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "optimizer")))]
     pub use crate::optimizer::*;
 
     #[cfg(feature = "draws")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "draws")))]
     pub use crate::draws::*;
 }
 

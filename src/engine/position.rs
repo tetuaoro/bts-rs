@@ -64,6 +64,7 @@ impl Position {
 
     /// Returns the current exit price.
     #[cfg(feature = "metrics")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
     pub fn exit_price(&self) -> Option<&f64> {
         self.exit_price.as_ref()
     }
@@ -79,6 +80,7 @@ impl Position {
     }
 
     #[cfg(feature = "metrics")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
     /// Returns the estimated profit and loss if it is closed at the `exit_price`.
     pub fn pnl(&self) -> Result<f64> {
         let exit_price = self.exit_price.ok_or(Error::ExitPrice(0.0))?;

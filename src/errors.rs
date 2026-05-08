@@ -119,6 +119,7 @@ pub enum Error {
     /// ### Arguments
     /// * `0` - The underlying plotters error.
     #[cfg(feature = "draws")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "draws")))]
     #[error("{0}")]
     Plotters(String),
 
@@ -127,6 +128,7 @@ pub enum Error {
     /// ### Arguments
     /// * `0` - The underlying charming error.
     #[cfg(feature = "draws")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "draws")))]
     #[error("{0}")]
     Charming(#[from] charming::EchartsError),
 }

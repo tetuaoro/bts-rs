@@ -77,6 +77,7 @@ impl DrawOptions {
     }
 
     #[cfg(feature = "metrics")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
     /// Enables or disables the metrics chart.
     pub fn show_metrics(mut self, show: bool) -> Self {
         self.show_metrics = show;
@@ -132,7 +133,13 @@ impl From<&Backtest> for Draw {
 
 impl Draw {
     /// Creates a new `Draw` instance.
-    pub fn new(candles: Vec<Candle>, options: DrawOptions, #[cfg(feature = "metrics")] metrics: Metrics) -> Self {
+    pub fn new(
+        candles: Vec<Candle>,
+        options: DrawOptions,
+        #[cfg(feature = "metrics")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
+        metrics: Metrics,
+    ) -> Self {
         Self {
             candles,
             series: Vec::new(),

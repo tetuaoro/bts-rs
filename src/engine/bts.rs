@@ -177,6 +177,7 @@ impl Backtest {
 
     /// Returns an iterator over the recorded events.
     #[cfg(feature = "metrics")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
     pub fn events(&self) -> std::slice::Iter<'_, Event> {
         self.events.iter()
     }
